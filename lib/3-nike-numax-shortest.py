@@ -1,0 +1,145 @@
+'''
+This is just a test case to measure the shortest distance to the edge on nike diagram.
+
+We all know it is not ideal because manipulating numax will also change its vertical position
+on nike diagram, therefore the horizontal distance is not completely dependent on numax.
+
+I only aim to improve my algorithms in this program:
+1) automate the program to guess priors and initial paramters;
+2) incorporate a monte-carlo trial to reasonably reduce scatter.
+
+'''
+
+rootpath = "/headnode2/yali4742/nike/"
+
+import numpy as np 
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import sys
+sys.path.append(rootpath) 
+from lib.histdist import model3, model4, distfit, distance_to_edge
+import seaborn as sns
+from multiprocessing import Pool
+import random
+
+
+# read in unperturbed dnu and numax, with edges
+nike_samples_obs = np.load(rootpath+"sample/obs/nike_samples.npy")
+nike_edges_obs = np.load(rootpath+"sample/obs/nike_edge_samples.npy")
+tck_obs = np.load(rootpath+"sample/obs/spline_tck.npy", allow_pickle=True)
+# read in unperturbed dnu and numax, with edges
+nike_samples_pdv = np.load(rootpath+"sample/padova/nike_samples.npy")
+nike_edges_pdv = np.load(rootpath+"sample/padova/nike_edge_samples.npy")
+tck_pdv = np.load(rootpath+"sample/padova/spline_tck.npy", allow_pickle=True)
+filepath = rootpath+"sample/sharpness/perturb_gif_nike/numax_shortest/"
+distance = "shortest"
+diagram = "nike"
+hist_model = model4()
+montecarlo = 120
+
+
+### step 1: set up observations
+# calculate observational distance
+xobs, yobs = nike_samples_obs[:,0], nike_samples_obs[:,1]
+idx = (yobs>=3.0) #& (yobs<=3.5)
+xobs, yobs = xobs[idx], yobs[idx]
+
+xedge_obs, yedge_obs = nike_edges_obs[:,0], nike_edges_obs[:,1]
+idx = (yedge_obs>=3.0) #& (yedge<=3.5)
+xedge_obs, yedge_obs = xedge_obs[idx], yedge_obs[idx]
+
+
+hdist_obs = distance_to_edge(xobs, yobs, xedge_obs, yedge_obs, tck_obs, diagram=diagram, distance=distance)
+obj_obs = distfit(hdist_obs, hist_model)
+obj_obs = distfit(hdist_obs, hist_model, bins=obj_obs.bins)
+obj_obs.fit()
+sharpness_obs = hist_model.sharpness(obj_obs.para_fit)
+Nobs = hdist_obs.shape[0]
+
+
+### step 2: set up models
+dnu, numax = nike_samples_pdv[:,0]**0.75/nike_samples_pdv[:,1], nike_samples_pdv[:,0]
+idx = (numax**0.75/dnu>=3.0) #& (numax**0.75/dnu<=3.5)
+dnu, numax = dnu[idx], numax[idx]
+
+xedge_pdv, yedge_pdv = nike_edges_pdv[:,0], nike_edges_pdv[:,1]
+idx = (yedge_pdv>=3.0) #& (yedge<=3.5)
+xedge_pdv, yedge_pdv = xedge_pdv[idx], yedge_pdv[idx]
+
+
+# metric = np.zeros((dnu_perturb.shape[0], numax_perturb.shape[0]))
+numax_perturb = np.arange(0.00, 0.05, 0.001) # np.arange(0.00, 0.06, 0.11)#
+dnu_perturb = np.arange(0.00, 0.02, 0.1) #np.arange(0., 0.05, 0.1)
+sharpness_med = np.zeros((numax_perturb.shape[0], dnu_perturb.shape[0]), dtype=float)
+sharpness_std = np.zeros((numax_perturb.shape[0], dnu_perturb.shape[0]), dtype=float)
+
+for inumax in range(numax_perturb.shape[0]):
+    for idnu in range(dnu_perturb.shape[0]):
+        print(inumax, idnu)
+        
+        # initiate a plot
+        fig = plt.figure(figsize=(12,12))
+        axes = fig.subplots(nrows=2, ncols=1)
+        obj_obs.plot_hist(ax=axes[0], histkwargs={"color":"red", "label":"Observations", "zorder":100})
+        obj_obs.plot_fit(ax=axes[0], fitkwargs={"color":"black", "label":"Observations fit", "linestyle":"--", "zorder":100})
+
+        # add perturbations
+        Ndata = numax.shape[0]
+        # sharpness_pdv_mcs = np.zeros(montecarlo)
+
+        # for imc in range(montecarlo):
+        def simulation(imc):
+            # print(imc, "/", montecarlo)
+            fnumax = (np.array([random.gauss(0,1) for i in range(Ndata)]) * numax_perturb[inumax] + 1)
+            fdnu = (np.array([random.gauss(0,1) for i in range(Ndata)]) * dnu_perturb[idnu] + 1)
+            xdata, ydata = (numax*fnumax), (numax*fnumax)**0.75/(dnu*fdnu)
+            
+            dist = distance_to_edge(xdata, ydata, xedge_pdv, yedge_pdv, tck_pdv, diagram=diagram, distance=distance)
+            obj = distfit(dist, hist_model, bins=obj_obs.bins)
+            obj.fit()
+            sharpness_pdv = hist_model.sharpness(obj.para_fit)
+            return xdata, ydata, obj, sharpness_pdv
+
+        
+        pool = Pool(processes=12)
+        result = pool.map(simulation, np.arange(0,montecarlo).tolist())
+        xdata, ydata, obj, _ = result[0]
+        sharpness_pdv_mcs = [result[i][-1] for i in range(len(result))]
+
+        sharpness_med[inumax, idnu] = np.median(sharpness_pdv_mcs)
+        sharpness_std[inumax, idnu] = np.std(sharpness_pdv_mcs)
+
+        # obj.histy = obj.histy/(Ndata/Nobs)  
+        obj.plot_hist(ax=axes[0], histkwargs={"color":"blue", "label":"Galaxia"})
+        obj.plot_fit(ax=axes[0], fitkwargs={"color":"black", "label":"Galaxia fit"})
+
+        
+        axes[0].text(0.9, 0.6, "Galaxia slope: {:0.1f} $\pm$ {:0.1f}".format(sharpness_med[inumax, idnu], sharpness_std[inumax, idnu]), ha="right", va="top", transform=axes[0].transAxes)
+        axes[0].text(0.9, 0.55, "Observational slope: {:0.1f}".format(sharpness_obs), ha="right", va="top", transform=axes[0].transAxes)
+        axes[0].set_title("Scatter in dnu: {:0.2f}%, Scatter in numax: {:0.2f}%".format(dnu_perturb[idnu]*100,numax_perturb[inumax]*100))   
+        axes[0].legend()
+        axes[0].grid(True)
+        axes[0].set_xlim(obj_obs.histx.min(), obj_obs.histx.max())
+        axes[0].set_ylim(-10., obj_obs.histy.max()*1.5)
+
+
+        # diagram axes[1]
+        axes[1].plot(xobs, yobs, "r.", ms=1)
+        axes[1].plot(xdata, ydata, "b.", ms=1)
+        axes[1].plot(xedge_obs, yedge_obs, "k--")
+        axes[1].plot(xedge_pdv, yedge_pdv, "k-")
+
+        axes[1].grid(True)
+        axes[1].axis([10, 200, 2.3, 5.0])
+        axes[1].set_xscale("log")
+
+
+        plt.savefig(filepath+"{:0.0f}_numax_{:0.0f}_dnu.png".format(inumax, idnu))
+        plt.close()
+
+# save data
+data = {"numax_perturb":numax_perturb, "dnu_perturb":dnu_perturb, "montecarlo":montecarlo,
+        "sharpness_med":sharpness_med, "sharpness_std":sharpness_std, "sharpness_obs":sharpness_obs}
+np.save(filepath+"data", data)
+
