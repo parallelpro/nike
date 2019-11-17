@@ -7,11 +7,18 @@ from scipy.optimize import basinhopping, minimize
 from scipy.special import erf 
 import scipy.spatial.distance
 
-__all__ = ["distfit", "model1", "model2", "model3", "model4", "distance_to_edge"]
+__all__ = ["distfit", "model1", "model2", "model3", "model4", "distance_to_edge", "reduce_samples"]
 
-def distance_to_edge(xdata, ydata, xedge, yedge, tck_in_nike, diagram="nike", distance="shortest"):
-    if not (diagram in ["nike", "tnu"]):
-        raise ValueError("diagram should be in ['nike', 'tnu']")
+def reduce_samples(Ndata, Ntarget):
+    factor = int(Ndata/Ntarget)
+    idx = np.zeros(Ndata, dtype=bool)
+    idx[np.arange(0,int(Ndata/factor))*factor] = True
+    return idx
+
+def distance_to_edge(xdata, ydata, xedge, yedge, tck, diagram="nike", distance="shortest"):
+
+    if not (diagram in ["nike", "tnu", "mr"]):
+        raise ValueError("diagram should be in ['nike', 'tnu', 'mr']")
     if not (distance in ["shortest", "vertical", "horizontal"]):
         raise ValueError("distance should be in ['shortest', 'vertical', 'horizontal']")
     # Ndata, Nedge = xdata.shape[0], xedge.shape[0]
@@ -59,6 +66,24 @@ def distance_to_edge(xdata, ydata, xedge, yedge, tck_in_nike, diagram="nike", di
             Y = scipy.spatial.distance.cdist(Xa, Xb)
             argdist = np.argmin(Y, axis=1)
             dist[~idx_data] = np.abs(xdata[~idx_data] - xedge[~idx_edge][argdist]) 
+        elif diagram=="mr":
+            dist = np.zeros(xdata.shape[0])
+            # need to separate left or right according to mass
+            xp = xedge[yedge==yedge.max()][0]
+            idx_data = xdata >= xp
+            idx_edge = xedge >= xp
+            if xdata[idx_data].shape[0] != 0:
+                Xa = np.array([ydata[idx_data]]).T
+                Xb = np.array([yedge[idx_edge]]).T
+                Y = scipy.spatial.distance.cdist(Xa, Xb)
+                argdist = np.argmin(Y, axis=1)
+                dist[idx_data] = np.abs(xdata[idx_data] - xedge[idx_edge][argdist]) 
+
+            Xa = np.array([ydata[~idx_data]]).T
+            Xb = np.array([yedge[~idx_edge]]).T
+            Y = scipy.spatial.distance.cdist(Xa, Xb)
+            argdist = np.argmin(Y, axis=1)
+            dist[~idx_data] = np.abs(xdata[~idx_data] - xedge[~idx_edge][argdist])             
         else:
             Xa = np.array([ydata]).T
             Xb = np.array([yedge]).T
@@ -73,10 +98,11 @@ def distance_to_edge(xdata, ydata, xedge, yedge, tck_in_nike, diagram="nike", di
 
     # signs: left or right?
     if diagram=="nike":
-        idx_right = xdata>10.0**scipy.interpolate.splev(np.log10(ydata), tck_in_nike, der=0)
+        idx_right = xdata>10.0**scipy.interpolate.splev(np.log10(ydata), tck, der=0)
     if diagram=="tnu":
-        idx_right = xdata>10.0**scipy.interpolate.splev(np.log10(xdata**0.75/ydata), tck_in_nike, der=0)
-        
+        idx_right = xdata>10.0**scipy.interpolate.splev(np.log10(xdata**0.75/ydata), tck, der=0)
+    if diagram=="mr":
+        idx_right = ydata<scipy.interpolate.splev(xdata, tck, der=0)
     dist[idx_right] = -dist[idx_right]
 
     return dist

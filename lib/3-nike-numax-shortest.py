@@ -27,11 +27,11 @@ import random
 # read in unperturbed dnu and numax, with edges
 nike_samples_obs = np.load(rootpath+"sample/obs/nike_samples.npy")
 nike_edges_obs = np.load(rootpath+"sample/obs/nike_edge_samples.npy")
-tck_obs = np.load(rootpath+"sample/obs/spline_tck.npy", allow_pickle=True)
+tck_obs = np.load(rootpath+"sample/obs/nike_spline_tck.npy", allow_pickle=True)
 # read in unperturbed dnu and numax, with edges
 nike_samples_pdv = np.load(rootpath+"sample/padova/nike_samples.npy")
 nike_edges_pdv = np.load(rootpath+"sample/padova/nike_edge_samples.npy")
-tck_pdv = np.load(rootpath+"sample/padova/spline_tck.npy", allow_pickle=True)
+tck_pdv = np.load(rootpath+"sample/padova/nike_spline_tck.npy", allow_pickle=True)
 filepath = rootpath+"sample/sharpness/perturb_gif_nike/numax_shortest/"
 distance = "shortest"
 diagram = "nike"

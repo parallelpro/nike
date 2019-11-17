@@ -1,7 +1,0 @@
-Warning: no access to tty (Bad file descriptor).
-Thus no job control in this shell.
-stty: standard input: Inappropriate ioctl for device
-Your default printer is `complexlw1'
-Fri Nov 15 08:31:00 AEDT 2019
-node22.physics.usyd.edu.au
-Terminated
