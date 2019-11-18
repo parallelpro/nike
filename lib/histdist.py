@@ -203,15 +203,21 @@ class model4:
         return
     
     def set_priors(self, histx, histy, dist):
-        maximum_center = histx[histy==histy.max()][0]
-        sig = np.abs(maximum_center-histx.min())*0.5
-        self.prior_guess = [[1e-6, sig*3.0], #sigma
+        x0 = histx[histy==histy.max()][0]
+        H = histy.max()
+        idx = histx<=x0
+        integration = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
+        sig = integration/(np.sqrt(np.pi/2.0)*H)
+        idx = histx>=x0
+        integration = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
+        tau = integration/H
+        self.prior_guess = [[1e-6, sig*5.0], #sigma
                             [1e-6, histy.max()*2.], #H
                             [histx.min(), histx.max()], # x0
-                            [1e-6, 1000.]] #tau
+                            [tau*1e-3, tau*1e3]] #tau
                             # [maximum_center+0.5*sig, histx.max()]] # x1
                             # [-1e2, -1e-10]] #k]
-        self.para_guess = [sig, histy.max(), maximum_center, 10.]
+        self.para_guess = [sig, H, x0, tau]
         return
 
     def ymodel(self, theta, x):

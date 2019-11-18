@@ -14,6 +14,6 @@ date
 hostname
 module load Anaconda3-5.1.0
 python3 "/headnode2/yali4742/nike/lib/5-tnu-numax.py"
-python3 "/headnode2/yali4742/nike/lib/6-tnu-dnu.py"
+# python3 "/headnode2/yali4742/nike/lib/6-tnu-dnu.py"
 date
 exit

@@ -152,3 +152,116 @@ def sharpness_fit(xobso, yobso, zobso, edges_obs, tck_obs,
                 "diagram":diagram, "distance":distance,
                 "zvalue_limits": zvalue_limits, "zvalue_name":zvalue_name}
         np.save(tfilepath+"data", data)
+
+def plot_slope_scatter(filepath, distance="horizontal", diagram="tnu"):
+    if not (distance in ["horizontal", "vertical"]):
+        raise ValueError("distance should be horizontal or vertical.")
+    if not (diagram in ["tnu", "mr"]):
+        raise ValueError("diagram should be tnu or mr.")
+
+    # read data
+    data = np.load(filepath+"data.npy").tolist()
+    if distance=="horizontal":
+        cp_scatter = data["yperturb"][0]
+        scatter = data["xperturb"]
+        slope = data["sharpness_med"][:,0]
+        eslope = data["sharpness_std"][:,0]
+    else:
+        scatter = data["yperturb"]
+        cp_scatter = data["xperturb"][0]
+        slope = data["sharpness_med"][0,:]
+        eslope = data["sharpness_std"][0,:]
+    slope_obs = data["sharpness_obs"]
+
+    errorbarkwargs = {"elinewidth":1, "capsize":2, "ecolor":"black"}
+    x, y = scatter*100, slope-slope_obs
+    ey = eslope
+    # initiate a plot
+    fig = plt.figure(figsize=(6,4))
+    axes = fig.subplots(nrows=1, ncols=1, squeeze=False).reshape(-1,)
+    axes[0].errorbar(x, y, yerr=ey, fmt="k.", **errorbarkwargs)
+    axes[0].axhline(0, c="r", ls="--")
+
+    idx = np.abs(y) == np.abs(y).min()
+    axes[0].axvline(x[idx][0], c="r", ls="--")
+    axes[0].axis([x.min(), x.max(), y.min(), y.max()])
+
+    if diagram=="tnu":
+        if distance=="horizontal":
+            axes[0].set_title("Scatter in dnu: {:0.2f}%, scatter in numax: {:0.2f}%".format(cp_scatter, x[idx][0]))
+            axes[0].set_xlabel("Scatter in numax relation [%]")
+        if distance=="vertical":
+            axes[0].set_title("Scatter in dnu: {:0.2f}%, scatter in numax: {:0.2f}%".format(x[idx][0], cp_scatter))
+            axes[0].set_xlabel("Scatter in dnu relation [%]")            
+    if diagram=="mr":
+        if distance=="horizontal":
+            axes[0].set_title("Scatter in R: {:0.2f}%, scatter in M: {:0.2f}%".format(cp_scatter, x[idx][0]))
+            axes[0].set_xlabel("Scatter in M relation [%]")
+        if distance=="vertical":
+            axes[0].set_title("Scatter in R: {:0.2f}%, scatter in M: {:0.2f}%".format(x[idx][0], cp_scatter))
+            axes[0].set_xlabel("Scatter in R relation [%]") 
+
+    axes[0].set_ylabel("Slope(galaxia) - Slope(obs)")
+    plt.tight_layout()
+    plt.savefig(filepath+"slope_scatter.png")
+    plt.close()
+    return
+
+def plot_scatter_zvalue(filepath, bins=3, distance="horizontal", diagram="tnu"):
+    if not (distance in ["horizontal", "vertical"]):
+        raise ValueError("distance should be horizontal or vertical.")
+    if not (diagram in ["tnu", "mr"]):
+        raise ValueError("diagram should be tnu or mr.")
+
+    # read zvalue and zname
+    data = np.load(filepath+str(bins-1)+"/data.npy").tolist()
+    zvalue_limits = data["zvalue_limits"]
+    zvalue_name = data["zvalue_name"]
+    zvalue = np.array([(zvalue_limits[0][i] + zvalue_limits[1][i])/2.0 for i in range(len(zvalue_limits[0]))])
+    
+    # calculate scatter in each folder
+    fs = np.zeros(len(zvalue))
+    for i in range(len(zvalue)):
+        data = np.load(filepath+str(i)+"/data.npy").tolist()
+        if distance=="horizontal":
+            cp_scatter = data["yperturb"][0]
+            scatter = data["xperturb"]
+            slope = data["sharpness_med"][:,0]
+            eslope = data["sharpness_std"][:,0]
+        else:
+            scatter = data["yperturb"]
+            cp_scatter = data["xperturb"][0]
+            slope = data["sharpness_med"][0,:]
+            eslope = data["sharpness_std"][0,:]
+        slope_obs = data["sharpness_obs"]
+
+        x, y = scatter*100, slope-slope_obs
+        idx = np.abs(y) == np.abs(y).min()
+        fs[i] = x[idx][0]
+
+    # initiate a plot
+    fig = plt.figure(figsize=(6,4))
+    axes = fig.subplots(nrows=1, ncols=1, squeeze=False).reshape(-1,)
+    axes[0].plot(zvalue, fs, "k.", ms=12)
+    axes[0].plot(zvalue, fs, "k--")
+    axes[0].set_ylim([0., fs.max()*1.1])#fs.max()+(fs.max()-fs.min())*0.2
+
+    if diagram=="tnu":
+        if distance=="horizontal":
+            axes[0].set_ylabel("Fitted scatter in numax relation [%]")
+        if distance=="vertical":
+            axes[0].set_ylabel("Fitted scatter in dnu relation [%]")            
+    if diagram=="mr":
+        if distance=="horizontal":
+            axes[0].set_ylabel("Fitted scatter in M relation [%]")
+        if distance=="vertical":
+            axes[0].set_ylabel("Fitted scatter in R relation [%]") 
+
+    axes[0].set_xlabel(zvalue_name)
+    plt.tight_layout()
+    plt.savefig(filepath+"scatter_zvalue.png")
+    plt.close()
+    return
+
+
+

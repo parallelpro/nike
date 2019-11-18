@@ -58,8 +58,10 @@ montecarlo = 120
 
 
 # trial 2: mass effect
-zvalue_limits = [[0.3, 1.14, 1.47],
-                [1.14, 1.47, 5.24]]
+# zvalue_limits = [[0.3, 1.14, 1.47],
+#                 [1.14, 1.47, 5.24]]
+zvalue_limits = [[0.3],
+                [1.14]]
 zvalue_name = "mass"
 
 xobs, yobs, zobs = tnu_samples_obs[:,0], tnu_samples_obs[:,1], tnu_samples_obs[:,3]
@@ -80,24 +82,26 @@ sharpness_fit(xobs, yobs, zobs, tnu_edges_obs, tck_obs,
         zvalue_limits=zvalue_limits, zvalue_name=zvalue_name)
 
 
-# trial 3: feh effect
-zvalue_limits = [[-3.0, -0.20, 0.02],
-                [-0.20, 0.02, 1.0]]
-zvalue_name = "feh"
+# # trial 3: feh effect
+# zvalue_limits = [[-3.0, -0.20, 0.02],
+#                 [-0.20, 0.02, 1.0]]
+# # zvalue_limits = [[-3.0],
+# #                 [-0.20]]
+# zvalue_name = "feh"
 
-xobs, yobs, zobs = tnu_samples_obs[:,0], tnu_samples_obs[:,1], tnu_samples_obs[:,2]
-# idx = (xobs<=2.2) #& (yobs<=(yedge_obs.max()))
-# xobs, yobs, zobs = xobs[idx], yobs[idx], zobs[idx]
+# xobs, yobs, zobs = tnu_samples_obs[:,0], tnu_samples_obs[:,1], tnu_samples_obs[:,2]
+# # idx = (xobs<=2.2) #& (yobs<=(yedge_obs.max()))
+# # xobs, yobs, zobs = xobs[idx], yobs[idx], zobs[idx]
 
-xpdv, ypdv, zpdv = tnu_samples_pdv[:,0], tnu_samples_pdv[:,1], tnu_samples_pdv[:,2]
-# idx = (xpdv<=1.9) #& (radius<=yedge_pdv.max())#
-# xpdv, ypdv, zpdv = xpdv[idx], ypdv[idx], zpdv[idx]
+# xpdv, ypdv, zpdv = tnu_samples_pdv[:,0], tnu_samples_pdv[:,1], tnu_samples_pdv[:,2]
+# # idx = (xpdv<=1.9) #& (radius<=yedge_pdv.max())#
+# # xpdv, ypdv, zpdv = xpdv[idx], ypdv[idx], zpdv[idx]
 
-filepath = rootpath+"sample/sharpness/perturb_gif_tnu/numax_feh/"
-if not os.path.exists(filepath): os.mkdir(filepath)
+# filepath = rootpath+"sample/sharpness/perturb_gif_tnu/numax_feh/"
+# if not os.path.exists(filepath): os.mkdir(filepath)
 
-sharpness_fit(xobs, yobs, zobs, tnu_edges_obs, tck_obs,
-        xpdv, ypdv, zpdv, tnu_edges_pdv, tck_pdv,
-        diagram, distance, hist_model,
-        filepath, xperturb, yperturb, montecarlo,
-        zvalue_limits=zvalue_limits, zvalue_name=zvalue_name)
+# sharpness_fit(xobs, yobs, zobs, tnu_edges_obs, tck_obs,
+#         xpdv, ypdv, zpdv, tnu_edges_pdv, tck_pdv,
+#         diagram, distance, hist_model,
+#         filepath, xperturb, yperturb, montecarlo,
+#         zvalue_limits=zvalue_limits, zvalue_name=zvalue_name)

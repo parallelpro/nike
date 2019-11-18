@@ -25,9 +25,9 @@ tnu_edges_pdv = np.load(rootpath+"sample/padova_oversampling/tnu_edge_samples.np
 tck_pdv = np.load(rootpath+"sample/padova_oversampling/nike_spline_tck.npy", allow_pickle=True)
 
 # to exclude those points which lies left to the edge (so no vertical distance).
-idx = tnu_samples_obs[:,0]<np.min(tnu_edges_obs[:,0])
+idx = tnu_samples_obs[:,0]>=np.min(tnu_edges_obs[:,0])
 tnu_samples_obs = tnu_samples_obs[idx, :]
-idx = tnu_samples_pdv[:,0]<np.min(tnu_edges_pdv[:,0])
+idx = tnu_samples_pdv[:,0]>=np.min(tnu_edges_pdv[:,0])
 tnu_samples_pdv = tnu_samples_pdv[idx, :]
 
 distance = "vertical"

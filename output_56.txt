@@ -1,13 +1,11 @@
 Warning: no access to tty (Bad file descriptor).
 Thus no job control in this shell.
-m: Command not found.
 stty: standard input: Inappropriate ioctl for device
 Your default printer is `complexlw1'
-m: Command not found.
-Sun Nov 17 18:50:34 AEST 2019
+Mon 18 Nov 10:03:48 AEST 2019
 node45.physics.usyd.edu.au
-zvalue_name: None
-zvalue_limits: None
+zvalue_name: mass
+zvalue_limits: [[0.3], [1.14]]
 diagram: tnu
 distance: horizontal
 0  xscatter: 0.00%, 0  yscatter: 0.00%
@@ -60,130 +58,4 @@ distance: horizontal
 47  xscatter: 4.70%, 0  yscatter: 0.00%
 48  xscatter: 4.80%, 0  yscatter: 0.00%
 49  xscatter: 4.90%, 0  yscatter: 0.00%
-zvalue_name: mass
-zvalue_limits: [[0.3, 1.14, 1.47], [1.14, 1.47, 5.24]]
-diagram: tnu
-distance: horizontal
-Traceback (most recent call last):
-  File "/headnode2/yali4742/nike/lib/5-tnu-numax.py", line 80, in <module>
-    zvalue_limits=zvalue_limits, zvalue_name=zvalue_name)
-  File "/headnode2/yali4742/nike/lib/wrapper.py", line 64, in sharpness_fit
-    hdist_obs = distance_to_edge(xobs, yobs, xedge_obs, yedge_obs, tck_obs, diagram=diagram, distance=distance)
-  File "/headnode2/yali4742/nike/lib/histdist.py", line 103, in distance_to_edge
-    idx_right = xdata>10.0**scipy.interpolate.splev(np.log10(xdata**0.75/ydata), tck, der=0)
-  File "/usr/physics/python/anaconda3/lib/python3.6/site-packages/scipy/interpolate/fitpack.py", line 368, in splev
-    return _impl.splev(x, tck, der, ext)
-  File "/usr/physics/python/anaconda3/lib/python3.6/site-packages/scipy/interpolate/_fitpack_impl.py", line 601, in splev
-    raise ValueError("Invalid input data")
-ValueError: Invalid input data
-zvalue_name: None
-zvalue_limits: None
-diagram: tnu
-distance: vertical
-0  xscatter: 0.00%, 0  yscatter: 0.00%
-multiprocessing.pool.RemoteTraceback: 
-"""
-Traceback (most recent call last):
-  File "/usr/physics/python/anaconda3/lib/python3.6/multiprocessing/pool.py", line 119, in worker
-    result = (True, func(*args, **kwds))
-  File "/usr/physics/python/anaconda3/lib/python3.6/multiprocessing/pool.py", line 44, in mapstar
-    return list(map(*args))
-  File "/headnode2/yali4742/nike/lib/wrapper.py", line 30, in simulation
-    dist = distance_to_edge(xdata, ydata, xedge_pdv, yedge_pdv, tck_pdv, diagram=diagram, distance=distance)
-  File "/headnode2/yali4742/nike/lib/histdist.py", line 37, in distance_to_edge
-    argdist = np.argmin(Y, axis=1)
-  File "/usr/physics/python/anaconda3/lib/python3.6/site-packages/numpy/core/fromnumeric.py", line 1101, in argmin
-    return _wrapfunc(a, 'argmin', axis=axis, out=out)
-  File "/usr/physics/python/anaconda3/lib/python3.6/site-packages/numpy/core/fromnumeric.py", line 51, in _wrapfunc
-    return getattr(obj, method)(*args, **kwds)
-ValueError: attempt to get argmin of an empty sequence
-"""
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/headnode2/yali4742/nike/lib/6-tnu-dnu.py", line 51, in <module>
-    filepath, xperturb, yperturb, montecarlo)
-  File "/headnode2/yali4742/nike/lib/wrapper.py", line 113, in sharpness_fit
-    result = pool.map(fsimulation, np.arange(0,montecarlo).tolist())
-  File "/usr/physics/python/anaconda3/lib/python3.6/multiprocessing/pool.py", line 288, in map
-    return self._map_async(func, iterable, mapstar, chunksize).get()
-  File "/usr/physics/python/anaconda3/lib/python3.6/multiprocessing/pool.py", line 670, in get
-    raise self._value
-ValueError: attempt to get argmin of an empty sequence
-Sun Nov 17 18:58:11 AEST 2019
-Warning: no access to tty (Bad file descriptor).
-Thus no job control in this shell.
-m: Command not found.
-stty: standard input: Inappropriate ioctl for device
-Your default printer is `complexlw1'
-m: Command not found.
-Sun Nov 17 19:01:04 AEST 2019
-node45.physics.usyd.edu.au
-zvalue_name: mass
-zvalue_limits: [[0.3, 1.14, 1.47], [1.14, 1.47, 5.24]]
-diagram: tnu
-distance: horizontal
-0  xscatter: 0.00%, 0  yscatter: 0.00%
-1  xscatter: 0.10%, 0  yscatter: 0.00%
-2  xscatter: 0.20%, 0  yscatter: 0.00%
-3  xscatter: 0.30%, 0  yscatter: 0.00%
-4  xscatter: 0.40%, 0  yscatter: 0.00%
-5  xscatter: 0.50%, 0  yscatter: 0.00%
-6  xscatter: 0.60%, 0  yscatter: 0.00%
-7  xscatter: 0.70%, 0  yscatter: 0.00%
-8  xscatter: 0.80%, 0  yscatter: 0.00%
-9  xscatter: 0.90%, 0  yscatter: 0.00%
-10  xscatter: 1.00%, 0  yscatter: 0.00%
-11  xscatter: 1.10%, 0  yscatter: 0.00%
-12  xscatter: 1.20%, 0  yscatter: 0.00%
-13  xscatter: 1.30%, 0  yscatter: 0.00%
-14  xscatter: 1.40%, 0  yscatter: 0.00%
-15  xscatter: 1.50%, 0  yscatter: 0.00%
-16  xscatter: 1.60%, 0  yscatter: 0.00%
-17  xscatter: 1.70%, 0  yscatter: 0.00%
-18  xscatter: 1.80%, 0  yscatter: 0.00%
-19  xscatter: 1.90%, 0  yscatter: 0.00%
-20  xscatter: 2.00%, 0  yscatter: 0.00%
-21  xscatter: 2.10%, 0  yscatter: 0.00%
-22  xscatter: 2.20%, 0  yscatter: 0.00%
-23  xscatter: 2.30%, 0  yscatter: 0.00%
-24  xscatter: 2.40%, 0  yscatter: 0.00%
-25  xscatter: 2.50%, 0  yscatter: 0.00%
-26  xscatter: 2.60%, 0  yscatter: 0.00%
-27  xscatter: 2.70%, 0  yscatter: 0.00%
-28  xscatter: 2.80%, 0  yscatter: 0.00%
-29  xscatter: 2.90%, 0  yscatter: 0.00%
-30  xscatter: 3.00%, 0  yscatter: 0.00%
-31  xscatter: 3.10%, 0  yscatter: 0.00%
-32  xscatter: 3.20%, 0  yscatter: 0.00%
-33  xscatter: 3.30%, 0  yscatter: 0.00%
-34  xscatter: 3.40%, 0  yscatter: 0.00%
-35  xscatter: 3.50%, 0  yscatter: 0.00%
-36  xscatter: 3.60%, 0  yscatter: 0.00%
-37  xscatter: 3.70%, 0  yscatter: 0.00%
-38  xscatter: 3.80%, 0  yscatter: 0.00%
-39  xscatter: 3.90%, 0  yscatter: 0.00%
-40  xscatter: 4.00%, 0  yscatter: 0.00%
-41  xscatter: 4.10%, 0  yscatter: 0.00%
-42  xscatter: 4.20%, 0  yscatter: 0.00%
-43  xscatter: 4.30%, 0  yscatter: 0.00%
-44  xscatter: 4.40%, 0  yscatter: 0.00%
-45  xscatter: 4.50%, 0  yscatter: 0.00%
-46  xscatter: 4.60%, 0  yscatter: 0.00%
-47  xscatter: 4.70%, 0  yscatter: 0.00%
-48  xscatter: 4.80%, 0  yscatter: 0.00%
-49  xscatter: 4.90%, 0  yscatter: 0.00%
-0  xscatter: 0.00%, 0  yscatter: 0.00%
-1  xscatter: 0.10%, 0  yscatter: 0.00%
-2  xscatter: 0.20%, 0  yscatter: 0.00%
-3  xscatter: 0.30%, 0  yscatter: 0.00%
-4  xscatter: 0.40%, 0  yscatter: 0.00%
-5  xscatter: 0.50%, 0  yscatter: 0.00%
-6  xscatter: 0.60%, 0  yscatter: 0.00%
-7  xscatter: 0.70%, 0  yscatter: 0.00%
-8  xscatter: 0.80%, 0  yscatter: 0.00%
-9  xscatter: 0.90%, 0  yscatter: 0.00%
-10  xscatter: 1.00%, 0  yscatter: 0.00%
-11  xscatter: 1.10%, 0  yscatter: 0.00%
-12  xscatter: 1.20%, 0  yscatter: 0.00%
+Mon 18 Nov 10:20:26 AEST 2019
