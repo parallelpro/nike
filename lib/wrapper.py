@@ -37,7 +37,7 @@ def sharpness_fit(xobso, yobso, zobso, edges_obs, tck_obs,
         xpdvo, ypdvo, zpdvo, edges_pdv, tck_pdv,
         diagram, distance, hist_model,
         filepath, xperturb, yperturb, montecarlo,
-        zvalue_limits=None, zvalue_name=None):
+        zvalue_limits=None, zvalue_name=None, Ndata=None):
     
     print("zvalue_name:",zvalue_name)
     print("zvalue_limits:",zvalue_limits)
@@ -77,7 +77,8 @@ def sharpness_fit(xobso, yobso, zobso, edges_obs, tck_obs,
             xpdv, ypdv = xpdvo, ypdvo
 
         # reduce to same number of points
-        idx = reduce_samples(xpdv.shape[0], xobs.shape[0])
+        if (Ndata is None): Ndata =  Nobs
+        idx = reduce_samples(xpdv.shape[0], Ndata)
         xpdv, ypdv = xpdv[idx], ypdv[idx]
 
         # filepath

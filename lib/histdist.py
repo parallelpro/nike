@@ -232,10 +232,13 @@ class model4:
         # ymodel[idx] = H*np.exp(-(x1-x0)/tau) # +k*(x[idx]-x1)
         return ymodel
 
-    def sharpness(self, theta):
+    def sharpness(self, theta, ifsigma=False):
         # use the derivative at xc as the sharpness metric
         sigma, H = theta[0:2]
-        metric = H/sigma
+        if ifsigma: 
+            metric = sigma
+        else:
+            metric = H/sigma
         return metric
 
 
