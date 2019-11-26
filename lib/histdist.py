@@ -7,7 +7,8 @@ from scipy.optimize import basinhopping, minimize
 from scipy.special import erf 
 import scipy.spatial.distance
 
-__all__ = ["distfit", "model1", "model2", "model3", "model4", "distance_to_edge", "reduce_samples"]
+__all__ = ["distfit", "model1", "model2", "model3", "model4",
+            "model5", "distance_to_edge", "reduce_samples"]
 
 def reduce_samples(Ndata, Ntarget):
     factor = int(Ndata/Ntarget)
@@ -232,14 +233,54 @@ class model4:
         # ymodel[idx] = H*np.exp(-(x1-x0)/tau) # +k*(x[idx]-x1)
         return ymodel
 
-    def sharpness(self, theta, ifsigma=False):
+    def sharpness(self, theta):
         # use the derivative at xc as the sharpness metric
         sigma, H = theta[0:2]
-        if ifsigma: 
-            metric = sigma
-        else:
-            metric = H/sigma
+        metric = H/sigma
         return metric
+
+
+class model5:
+    def __init__(self):
+        # # model3
+        self.para_name = ["sigma", "H", "x0", "tau" ] #"x1", "k"
+        return
+    
+    def set_priors(self, histx, histy, dist):
+        x0 = histx[histy==histy.max()][0]
+        H = histy.max()
+        idx = histx<=x0
+        integration = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
+        sig = integration/(np.sqrt(np.pi/2.0)*H)
+        idx = histx>=x0
+        integration = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
+        tau = integration/H
+        self.prior_guess = [[1e-6, sig*5.0], #sigma
+                            [1e-6, histy.max()*2.], #H
+                            [histx.min(), histx.max()], # x0
+                            [tau*1e-3, tau*1e3]] #tau
+                            # [maximum_center+0.5*sig, histx.max()]] # x1
+                            # [-1e2, -1e-10]] #k]
+        self.para_guess = [sig, H, x0, tau]
+        return
+
+    def ymodel(self, theta, x):
+        sigma, H, x0, tau = theta #, x1
+        # if (x is None): x = self.histx
+        ymodel = np.zeros(x.shape[0])
+        idx = x<x0
+        ymodel[idx] = H*np.exp(-((x[idx]-x0)**2.0)/(2*sigma**2.0))
+        idx = (x>=x0) #& (x<x1)
+        ymodel[idx] = H*np.exp(-(x[idx]-x0)/tau) 
+        # idx = x>=x1
+        # ymodel[idx] = H*np.exp(-(x1-x0)/tau) # +k*(x[idx]-x1)
+        return ymodel
+
+    def sharpness(self, theta):
+        # use the derivative at xc as the sharpness metric
+        metric = theta[0] # sigma
+        return metric
+
 
 
 # how to fit

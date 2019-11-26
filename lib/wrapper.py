@@ -37,7 +37,8 @@ def sharpness_fit(xobso, yobso, zobso, edges_obs, tck_obs,
         xpdvo, ypdvo, zpdvo, edges_pdv, tck_pdv,
         diagram, distance, hist_model,
         filepath, xperturb, yperturb, montecarlo,
-        zvalue_limits=None, zvalue_name=None, Ndata=None):
+        zvalue_limits=None, zvalue_name=None, Ndata=None,
+        cores=12):
     
     print("zvalue_name:",zvalue_name)
     print("zvalue_limits:",zvalue_limits)
@@ -110,7 +111,7 @@ def sharpness_fit(xobso, yobso, zobso, edges_obs, tck_obs,
                         xedge_pdv=xedge_pdv, yedge_pdv=yedge_pdv, tck_pdv=tck_pdv,
                         diagram=diagram, distance=distance, hist_model=hist_model, obj_obs=obj_obs)
 
-                pool = Pool(processes=12)
+                pool = Pool(processes=cores)
                 result = pool.map(fsimulation, np.arange(0,montecarlo).tolist())
                 pool.close()
                 pool.join()
