@@ -6,9 +6,20 @@ import matplotlib.pyplot as plt
 from scipy.optimize import basinhopping, minimize
 from scipy.special import erf 
 import scipy.spatial.distance
+import scipy.interpolate
+
+import sys
+import emcee
+import corner
 
 __all__ = ["distfit", "model1", "model2", "model3", "model4",
-            "model5", "distance_to_edge", "reduce_samples"]
+            "model5", "model5_prob", "model6_prob", 
+            "distance_to_edge", "reduce_samples"]
+
+def display_bar(j, nburn, width=30):
+        n = int((width+1) * float(j) / nburn)
+        sys.stdout.write("\r[{0}{1}]".format('#' * n, ' ' * (width - n)))
+        return
 
 def reduce_samples(Ndata, Ntarget):
     factor = int(Ndata/Ntarget)
@@ -244,6 +255,7 @@ class model5:
     def __init__(self):
         # # model3
         self.para_name = ["sigma", "H", "x0", "tau" ] #"x1", "k"
+        self.ndim = 4
         return
     
     def set_priors(self, histx, histy, dist):
@@ -255,7 +267,7 @@ class model5:
         idx = histx>=x0
         integration = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
         tau = integration/H
-        self.prior_guess = [[1e-6, sig*5.0], #sigma
+        self.prior_guess = [[1e-6, sig*10.0], #sigma
                             [1e-6, histy.max()*2.], #H
                             [histx.min(), histx.max()], # x0
                             [tau*1e-3, tau*1e3]] #tau
@@ -275,17 +287,154 @@ class model5:
         # idx = x>=x1
         # ymodel[idx] = H*np.exp(-(x1-x0)/tau) # +k*(x[idx]-x1)
         return ymodel
+    
 
     def sharpness(self, theta):
         # use the derivative at xc as the sharpness metric
         metric = theta[0] # sigma
         return metric
 
+class model5_prob:
+    def __init__(self):
+        # # model3
+        self.para_name = ["sigma", "x0", "tau" ] #"x1", "k"
+        self.ndim = 3
+        return
+    
+    def set_priors(self, histx, histy, dist):
+        x0 = histx[histy==histy.max()][0]
+        H = histy.max()
+        idx = histx<=x0
+        integration = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
+        sig = integration/(np.sqrt(np.pi/2.0)*H)
+        idx = histx>=x0
+        integration = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
+        tau = integration/H
+        self.prior_guess = [[1e-6, sig*10.0], #sigma
+                            [histx.min(), histx.max()], # x0
+                            [tau*1e-3, tau*1e3]] #tau
+        self.para_guess = [sig, x0, tau]
+        return
 
+    def ymodel(self, theta, x):
+        sigma, x0, tau = theta #, x1
+        # if (x is None): x = self.histx
+        x1, x2 = x.min(), x.max()
+        S1 = -(np.sqrt(np.pi/2.0)*sigma) * erf((x1-x0)/(np.sqrt(2)*sigma))
+        S2 = tau - tau*np.exp((x0-x2)/tau)
+        # H = 1./(np.sqrt(np.pi/2.)*sigma + tau)
+        H = 1.0/(S1+S2)
+        ymodel = np.zeros(x.shape[0])
+        idx = x<x0
+        ymodel[idx] = H*np.exp(-((x[idx]-x0)**2.0)/(2*sigma**2.0))
+        idx = (x>=x0) #& (x<x1)
+        ymodel[idx] = H*np.exp(-(x[idx]-x0)/tau) 
+        return ymodel
+    
+    def sharpness(self, theta):
+        # use the derivative at xc as the sharpness metric
+        metric = theta[0] # sigma
+        return metric
+
+
+class model6:
+    def __init__(self):
+        # # model3
+        self.para_name = ["sigma", "x0", "H", "gamma"] #"x1", "k"
+        self.ndim = 4
+        return
+    
+    def set_priors(self, histx, histy, dist):
+        x0 = histx[histy==histy.max()][0]
+        H = histy.max()
+        idx = histx<=x0
+        int1 = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
+        idx = histx>=x0
+        int2 = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
+        sig = int1/(np.sqrt(np.pi/2.0)*H)
+        gamma = int2*2/H/np.pi
+        self.prior_guess = [[1e-3, sig*20.0], #sigma
+                            [histx.min(), histx.max()], # x0
+                            [0.1*H, 2*H], #H
+                            [gamma*1e-3, gamma*1e3]] #gamma
+        self.para_guess = [sig, x0, H, gamma]
+        return
+
+    def ymodel(self, theta, x):
+        sigma, x0, H, gamma = theta #, x1
+        # if (x is None): x = self.histx
+        # S1 = -(np.sqrt(np.pi/2.0)*sigma) * erf((x1-x0)/(np.sqrt(2)*sigma))
+        # S2 = gamma*np.arctan((x2-x0)/gamma)
+        # H = 1.0/(S1+S2)
+        ymodel = np.zeros(x.shape[0])
+        idx = x<x0
+        ymodel[idx] = H*np.exp(-((x[idx]-x0)**2.0)/(2*sigma**2.0))
+        idx = (x>=x0) #& (x<x1)
+        ymodel[idx] = H/(1+(x[idx]-x0)**2.0/gamma**2.0)
+        return ymodel
+    
+    def sharpness(self, theta):
+        # use the derivative at xc as the sharpness metric
+        metric = [theta[0], theta[2]/theta[0]*np.exp(-0.5)] # sigma
+        return metric
+    
+    def e_sharpness(self, theta, etheta):
+        e_metric = [etheta[0],
+            np.exp(-0.5)*((1./theta[0]*etheta[2])**2.0 + (-theta[2]/theta[0]**2.0*etheta[0])**2.0)**0.5]
+        return e_metric
+        
+class model6_prob:
+    def __init__(self):
+        # # model3
+        self.para_name = ["sigma", "x0", "gamma" ] #"x1", "k"
+        self.ndim = 3
+        return
+    
+    def set_priors(self, histx, histy, dist):
+        x0 = histx[histy==histy.max()][0]
+        H = histy.max()
+        idx = histx<=x0
+        int1 = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
+        idx = histx>=x0
+        int2 = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
+
+        int = int1+int2
+        int1 = int1/int
+        int2 = int2/int
+        H = H/int
+
+        sig = int1/(np.sqrt(np.pi/2.0)*H)
+
+        gamma = int2*2/H/np.pi
+        self.prior_guess = [[1e-3, sig*20.0], #sigma
+                            [histx.min(), histx.max()], # x0
+                            [gamma*1e-3, gamma*1e3]] #gamma
+        self.para_guess = [sig, x0, gamma]
+        return
+
+    def ymodel(self, theta, x):
+        sigma, x0, gamma = theta #, x1
+        # if (x is None): x = self.histx
+        x1, x2 = x.min(), x.max()
+        S1 = -(np.sqrt(np.pi/2.0)*sigma) * erf((x1-x0)/(np.sqrt(2)*sigma))
+        S2 = gamma*np.arctan((x2-x0)/gamma)
+        # H = 1./(np.sqrt(np.pi/2.)*sigma + tau)
+        H = 1.0/(S1+S2)
+        ymodel = np.zeros(x.shape[0])
+        idx = x<x0
+        ymodel[idx] = H*np.exp(-((x[idx]-x0)**2.0)/(2*sigma**2.0))
+        idx = (x>=x0) #& (x<x1)
+        ymodel[idx] = H/(1+(x[idx]-x0)**2.0/gamma**2.0)
+        return ymodel
+    
+    def sharpness(self, theta):
+        # use the derivative at xc as the sharpness metric
+        metric = theta[0] # sigma
+        return metric
 
 # how to fit
 class distfit:
-    def __init__(self, dist, model, bins=None):
+    def __init__(self, dist, model, bins=None, density=False):
         if (bins is None):
             # p90 = np.percentile(dist, 85)
             hist, bin_edges = np.histogram(dist, bins="fd")
@@ -295,7 +444,9 @@ class distfit:
             # pdown = np.percentile(dist, 0.)#xmax_pencentile/3.0)
             # pup = np.percentile(dist, 100.)#-4*pdown
             # dist = dist[((dist<=pup) & (dist>=pdown))]
-            hist, bin_edges = np.histogram(dist, bins=len(bin_edges)*2)
+            # idx = bin_edges <= bin_edges[np.where(hist==hist.max())[0][0]]
+            # hist, bin_edges = np.histogram(dist, bins=bin_edges[idx], density=density)
+            hist, bin_edges = np.histogram(dist, bins=len(bin_edges)*2, density=density)
         else: 
             hist, bin_edges = np.histogram(dist, bins=bins)
         self.dist = dist
@@ -317,26 +468,77 @@ class distfit:
     def minus_lnlikelihood(self, theta, **kwargs):
         return -self.lnlikelihood(theta, **kwargs)
     
-    def fit(self, prior_guess=None, para_guess=None):
+    def lnprior(self, theta):
+        for ip in range(len(self.model.prior_guess)):
+            if not (self.model.prior_guess[ip][0] <= theta[ip] <= self.model.prior_guess[ip][1]):
+                    return -np.inf
+        return 0.
+
+    def lnpost(self, theta, **kwargs):
+        lp = self.lnprior(theta)
+        if not np.isfinite(lp):
+                return -np.inf
+        else:
+                return self.lnlikelihood(theta)
+    
+    def fit(self, ifmcmc=False):#prior_guess=None, para_guess=None, 
 		# maximize likelihood function by scipy.optimize.minimize function
         
 		# print(bounds)
 		# print(self.para_guess)
 
-        minimizer_kwargs={"bounds":self.model.prior_guess}
-        result = basinhopping(self.minus_lnlikelihood, self.model.para_guess, minimizer_kwargs=minimizer_kwargs)
-        # result = minimize(self.minus_lnlikelihood, self.model.para_guess, **minimizer_kwargs)
-        self.para_fit = result.x
+        if ifmcmc: 
+            # run mcmc with ensemble sampler
+            ndim = self.model.ndim
+            nwalkers, nburn, nsteps = 500, 1000, 1000
+
+            print("enabling Ensemble sampler.")
+            pos0 = [self.model.para_guess + 1.0e-1*np.random.randn(ndim) for j in range(nwalkers)]
+            sampler = emcee.EnsembleSampler(nwalkers, ndim, self.lnpost)
+
+            # # burn-in
+            print("start burning in. nburn:", nburn)
+            for j, result in enumerate(sampler.sample(pos0, iterations=nburn, thin=10)):
+                    # display_bar(j, nburn)
+                    pass
+            sys.stdout.write("\n")
+            pos, _, _ = result
+            sampler.reset()
+
+            # actual iteration
+            print("start iterating. nsteps:", nsteps)
+            for j, result in enumerate(sampler.sample(pos, iterations=nsteps)):
+                    # display_bar(j, nsteps)
+                    pass
+            sys.stdout.write("\n")
+
+            # modify samples
+            self.samples = sampler.chain[:,:,:].reshape((-1,ndim))
+
+            # save estimation result
+            # 16, 50, 84 quantiles
+            result = np.array(list(map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),
+                    zip(*np.percentile(self.samples, [16, 50, 84],axis=0)))))
+            self.result = result
+            self.para_fit = result[:,0]
+            self.e_para_fit = (result[:,1]+result[:,2])/2.0
+            # save guessed parameters
+            # np.savetxt(filepath+"guess.txt", para_guess, delimiter=",", fmt=("%0.8f"), header="para_guess")
+
+        else:
+            minimizer_kwargs={"bounds":self.model.prior_guess}
+            result = basinhopping(self.minus_lnlikelihood, self.model.para_guess, minimizer_kwargs=minimizer_kwargs)
+            # result = minimize(self.minus_lnlikelihood, self.model.para_guess, **minimizer_kwargs)
+            self.para_fit = result.x
+            self.e_para_fit = np.zeros(len(self.para_fit))-999.
+            # self.e_para_fit = np.diag(result.hess_inv)**0.5
         return
 
-    def output(self, filepath, ax=None, histkwargs={}, fitkwargs={}):
-        st = "LS"
+    def output(self, filepath, ax=None, ifmcmc=False, histkwargs={}, fitkwargs={}):
+        st = ""
         # output
         # save guessed parameters
         np.savetxt(filepath+st+"guess.txt", self.model.para_guess, delimiter=",", fmt=("%0.8f"), header="para_guess")
-
-        # save estimation result
-        np.savetxt(filepath+st+"summary.txt", self.para_fit, delimiter=",", fmt=("%0.8f"), header="parameter")
 
         # plot fitting results and save
         if (ax is None):
@@ -344,18 +546,31 @@ class distfit:
             # axes = fig.subplots(nrows=2,ncols=1,squezzz=False).reshape(-1)
             ax = fig.add_subplot(111)
         self.plot_hist(ax=ax, histkwargs=histkwargs)
-        self.plot_fit(self.para_fit, self.model.para_name, ax=ax, ifWritePara=True, fitkwargs=fitkwargs)
+        self.plot_fit(theta=self.para_fit, para_name=self.model.para_name, ax=ax, ifWritePara=True, fitkwargs=fitkwargs)
 
         plt.savefig(filepath+st+"fit.png")
         plt.close()
+
+        if ifmcmc:
+            # plot triangle and save
+            fig = corner.corner(self.samples, labels=self.model.para_name, show_titles=True, quantiles=(0.16, 0.5, 0.84))
+            fig.savefig(filepath+st+"triangle.png")
+            plt.close()
+
+            # save estimation result
+            np.savetxt(filepath+st+"summary.txt", self.result, delimiter=",", fmt=("%0.8f", "%0.8f", "%0.8f"), header="50th quantile, 16th quantile sigma, 84th quantile sigma")
+        else:
+            # save estimation result
+            np.savetxt(filepath+st+"summary.txt", self.para_fit, delimiter=",", fmt=("%0.8f"), header="parameter")
+
         return
 
-    def plot_hist(self, ax=None, histkwargs={}):
+    def plot_hist(self, scale=1, ax=None, histkwargs={}):
         # ax.hist(self.dist, histtype="step", bins=self.bins, zorder=0, **histkwargs)
-        ax.step(self.histx, self.histy, **histkwargs)
+        ax.step(self.histx, self.histy/scale, **histkwargs)
         return ax        
     
-    def plot_fit(self, theta=None, para_name=None, ax=None, 
+    def plot_fit(self, scale=1, theta=None, para_name=None, ax=None, 
                     oversampling=5, ifWritePara=False, fitkwargs={}):
         if (theta is None):
             theta = self.para_fit
@@ -368,7 +583,7 @@ class distfit:
 
         xfit = np.linspace(np.min(self.histx), np.max(self.histx), len(self.histx)*oversampling)
         yfit = self.model.ymodel(theta, xfit)
-        ax.plot(xfit, yfit, **fitkwargs)
+        ax.plot(xfit, yfit/scale, **fitkwargs)
 
         if ifWritePara:
             for ipara in range(len(para_name)):

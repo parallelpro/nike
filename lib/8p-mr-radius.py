@@ -2,7 +2,7 @@
 Post processing for analysing dnu on tnu diagram.
 '''
 
-rootpath = "/headnode2/yali4742/nike/"
+rootpath = "" #"/headnode2/yali4742/nike/"
 
 import numpy as np 
 import matplotlib
@@ -24,6 +24,6 @@ for filepath in filepaths:
     plot_slope_scatter(filepath, distance="vertical", diagram="mr")
 
 filepath = rootpath+"sample/sharpness/perturb_gif_mr/radius_feh/"
-plot_scatter_zvalue(filepath, distance="vertical", diagram="mr")
+plot_scatter_zvalue(filepath, distance="vertical", diagram="mr", iferr=True)
 filepath = rootpath+"sample/sharpness/perturb_gif_mr/radius_mass/"
-plot_scatter_zvalue(filepath, distance="vertical", diagram="mr")
+plot_scatter_zvalue(filepath, distance="vertical", diagram="mr", iferr=True)

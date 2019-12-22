@@ -2,7 +2,7 @@
 Post processing for analysing numax on tnu diagram.
 '''
 
-rootpath = "/headnode2/yali4742/nike/"
+rootpath = ""#"/headnode2/yali4742/nike/"
 
 import numpy as np 
 import matplotlib
@@ -24,7 +24,7 @@ for filepath in filepaths:
     plot_slope_scatter(filepath, distance="horizontal", diagram="mr")
 
 filepath = rootpath+"sample/sharpness/perturb_gif_mr/mass_feh/"
-plot_scatter_zvalue(filepath, distance="horizontal", diagram="mr")
+plot_scatter_zvalue(filepath, distance="horizontal", diagram="mr", iferr=True)
 filepath = rootpath+"sample/sharpness/perturb_gif_mr/mass_mass/"
-plot_scatter_zvalue(filepath, distance="horizontal", diagram="mr")
+plot_scatter_zvalue(filepath, distance="horizontal", diagram="mr", iferr=True)
 
