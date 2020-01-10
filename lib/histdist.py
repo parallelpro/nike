@@ -22,9 +22,12 @@ def display_bar(j, nburn, width=30):
         return
 
 def reduce_samples(Ndata, Ntarget):
-    factor = int(Ndata/Ntarget)
-    idx = np.zeros(Ndata, dtype=bool)
-    idx[np.arange(0,int(Ndata/factor))*factor] = True
+    # factor = int(Ndata/Ntarget)
+    # if factor <=0: factor = 1
+    # idx = np.zeros(Ndata, dtype=bool)
+    # idx[np.arange(0,int(Ndata/factor))*factor] = True
+    idx = np.arange(0,Ntarget)*Ndata/Ntarget
+    idx = np.array(idx, dtype=int)
     return idx
 
 # def distance_to_edge(xdata, ydata, xedge, yedge, tck, diagram="nike", distance="shortest"):
@@ -120,7 +123,7 @@ def reduce_samples(Ndata, Ntarget):
 #     return dist
 
 
-def distance_to_edge(xdata, ydata, xedge, yedge, tcks, tp, diagram="tnu", distance="shortest"):
+def distance_to_edge(xdata, ydata, xedge, yedge, tcks, tp, diagram="tnu", distance="vertical"):
 
     if not (diagram in ["tnu", "mr"]):
         raise ValueError("diagram should be in ['tnu', 'mr']")
@@ -130,7 +133,7 @@ def distance_to_edge(xdata, ydata, xedge, yedge, tcks, tp, diagram="tnu", distan
 
     if distance=="vertical": #y
         if diagram=="tnu":
-            idx = xdata >= xedge.min()
+            idx = (xdata >= xedge.min()) & (xdata <= tp[0])
             xdata, ydata = xdata[idx], ydata[idx]
             dist = np.zeros(xdata.shape[0])
 
@@ -148,13 +151,19 @@ def distance_to_edge(xdata, ydata, xedge, yedge, tcks, tp, diagram="tnu", distan
             
             # next, consider clumps (lower part) and secondary clumps
             idx_data = ~idx_data
-            idx_edge = ~idx_edge  
-            Xa = np.array([xdata[idx_data]]).T
-            Xb = np.array([xedge[idx_edge]]).T
-            Y = scipy.spatial.distance.cdist(Xa, Xb)
-            argdist = np.argmin(Y, axis=1)
-            dist[idx_data] = -(ydata[idx_data] - yedge[idx_edge][argdist]) 
+            idx_edge = ~idx_edge
+            if xdata[idx_data].shape[0] != 0: 
+                Xa = np.array([xdata[idx_data]]).T
+                Xb = np.array([xedge[idx_edge]]).T
+                Y = scipy.spatial.distance.cdist(Xa, Xb)
+                argdist = np.argmin(Y, axis=1)
+                dist[idx_data] = -(ydata[idx_data] - yedge[idx_edge][argdist]) 
+
         else:# diagram=="mr":
+            idx = (xdata<=tp[0])
+            xdata, ydata = xdata[idx], ydata[idx]
+            dist = np.zeros(xdata.shape[0])
+
             Xa = np.array([xdata]).T
             Xb = np.array([xedge]).T
             Y = scipy.spatial.distance.cdist(Xa, Xb)
@@ -164,7 +173,7 @@ def distance_to_edge(xdata, ydata, xedge, yedge, tcks, tp, diagram="tnu", distan
             
     if distance=="horizontal": #x
         if diagram=="tnu":
-            idx = ydata >= yedge.min()
+            idx = (ydata >= yedge.min()) & (xdata <= tp[0])
             xdata, ydata = xdata[idx], ydata[idx]
             dist = np.zeros(xdata.shape[0])
             
@@ -183,25 +192,28 @@ def distance_to_edge(xdata, ydata, xedge, yedge, tcks, tp, diagram="tnu", distan
             # next, consider clumps (right part)
             idx_data = (xdata > xp) & (xdata<= tp[0])
             idx_edge = (xedge > xp) & (xedge<= tp[0])
-            Xa = np.array([ydata[idx_data]]).T
-            Xb = np.array([yedge[idx_edge]]).T
-            Y = scipy.spatial.distance.cdist(Xa, Xb)
-            argdist = np.argmin(Y, axis=1)
-            dist[idx_data] = (xdata[idx_data] - xedge[idx_edge][argdist]) 
+            if xdata[idx_data].shape[0] != 0:
+                Xa = np.array([ydata[idx_data]]).T
+                Xb = np.array([yedge[idx_edge]]).T
+                Y = scipy.spatial.distance.cdist(Xa, Xb)
+                argdist = np.argmin(Y, axis=1)
+                dist[idx_data] = (xdata[idx_data] - xedge[idx_edge][argdist]) 
 
-            # finally, consider secondary clumps
-            idx_data = (xdata > tp[0])
-            idx_edge = (xedge > tp[0])
-            Xa = np.array([ydata[idx_data]]).T
-            Xb = np.array([yedge[idx_edge]]).T
-            Y = scipy.spatial.distance.cdist(Xa, Xb)
-            argdist = np.argmin(Y, axis=1)
-            dist[idx_data] = -(xdata[idx_data] - xedge[idx_edge][argdist]) 
+            # # finally, consider secondary clumps
+            # idx_data = (xdata > tp[0])
+            # idx_edge = (xedge > tp[0])
+            # if xdata[idx_data].shape[0] != 0:
+            #     Xa = np.array([ydata[idx_data]]).T
+            #     Xb = np.array([yedge[idx_edge]]).T
+            #     Y = scipy.spatial.distance.cdist(Xa, Xb)
+            #     argdist = np.argmin(Y, axis=1)
+            #     dist[idx_data] = -(xdata[idx_data] - xedge[idx_edge][argdist]) 
             
         else:# diagram=="mr":
-            idx = (ydata <= yedge[xedge<tp[0]].max())
+            idx = (ydata <= yedge[xedge<tp[0]].max()) & (xdata<=tp[0])
             xdata, ydata = xdata[idx], ydata[idx]
             dist = np.zeros(xdata.shape[0])
+
             # first, consider left part of clumps
             idx = xedge<tp[0]
             xp = xedge[idx][yedge[idx]==yedge[idx].max()][0]
@@ -217,20 +229,22 @@ def distance_to_edge(xdata, ydata, xedge, yedge, tcks, tp, diagram="tnu", distan
             # next, consider right part of clumps
             idx_data = (xdata > xp) & (xdata<=tp[0])
             idx_edge = (xedge > xp) & (xedge<=tp[0])
-            Xa = np.array([ydata[idx_data]]).T
-            Xb = np.array([yedge[idx_edge]]).T
-            Y = scipy.spatial.distance.cdist(Xa, Xb)
-            argdist = np.argmin(Y, axis=1)
-            dist[idx_data] = (xdata[idx_data] - xedge[idx_edge][argdist])             
+            if xdata[idx_data].shape[0] != 0:
+                Xa = np.array([ydata[idx_data]]).T
+                Xb = np.array([yedge[idx_edge]]).T
+                Y = scipy.spatial.distance.cdist(Xa, Xb)
+                argdist = np.argmin(Y, axis=1)
+                dist[idx_data] = (xdata[idx_data] - xedge[idx_edge][argdist])             
 
-            # finally, secondary clumps
-            idx_data = (xdata>tp[0])
-            idx_edge = (xedge>tp[0])
-            Xa = np.array([ydata[idx_data]]).T
-            Xb = np.array([yedge[idx_edge]]).T
-            Y = scipy.spatial.distance.cdist(Xa, Xb)
-            argdist = np.argmin(Y, axis=1)
-            dist[idx_data] = -(xdata[idx_data] - xedge[idx_edge][argdist])      
+            # # finally, secondary clumps
+            # idx_data = (xdata>tp[0])
+            # idx_edge = (xedge>tp[0])
+            # if xdata[idx_data].shape[0] != 0:
+            #     Xa = np.array([ydata[idx_data]]).T
+            #     Xb = np.array([yedge[idx_edge]]).T
+            #     Y = scipy.spatial.distance.cdist(Xa, Xb)
+            #     argdist = np.argmin(Y, axis=1)
+            #     dist[idx_data] = -(xdata[idx_data] - xedge[idx_edge][argdist])      
             
 #     # signs: left or right?
 #     if diagram=="tnu":
@@ -568,7 +582,7 @@ class model6_prob:
         # use the derivative at xc as the sharpness metric
         metric = theta[0] # sigma
         return metric
-
+ 
 # how to fit
 class distfit:
     def __init__(self, dist, model, bins=None, density=False):

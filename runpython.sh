@@ -14,9 +14,9 @@ date
 hostname
 # module load Anaconda3-5.1.0
 # '/headnode2/yali4742/nike'
-python 'lib/5-tnu-numax.py'
-python 'lib/6-tnu-dnu.py'
-# python "/headnode2/yali4742/nike/lib/7-mr-mass.py"
-# python "/headnode2/yali4742/nike/lib/8-mr-radius.py"
+# python 'lib/6-tnu-numax.py'
+# python 'lib/7-tnu-dnu.py'
+# python "lib/8-mr-mass.py"
+python "lib/9-mr-radius.py"
 date
 exit
