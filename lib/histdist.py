@@ -597,7 +597,7 @@ class distfit:
             # dist = dist[((dist<=pup) & (dist>=pdown))]
             # idx = bin_edges <= bin_edges[np.where(hist==hist.max())[0][0]]
             # hist, bin_edges = np.histogram(dist, bins=bin_edges[idx], density=density)
-            hist, bin_edges = np.histogram(dist, bins=len(bin_edges)*2, density=density)
+            hist, bin_edges = np.histogram(dist, bins=len(bin_edges)*2, density=density) 
         else: 
             hist, bin_edges = np.histogram(dist, bins=bins)
         self.dist = dist
