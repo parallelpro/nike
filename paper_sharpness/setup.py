@@ -12,6 +12,7 @@ import lightkurve as lk
 import seaborn as sns
 import os 
 from matplotlib.colors import ListedColormap
+import sys
 
 # color stuff
 red = sns.xkcd_rgb["pale red"]
@@ -28,13 +29,16 @@ def cmap_diverging(n=10):
 def cmap_grey(n=10):
     return ListedColormap(sns.color_palette("Greys", n))
 
+def blues(n=10):
+    return sns.color_palette("Blues", n)
+
 if os.name == 'nt':
     rootpath = '/Users/yali4742/'
 else:
     rootpath = '/Users/yaguang/'
 overleaf_path = rootpath+'Dropbox (Sydney Uni)/Apps/Overleaf/Yaguang_NIKE_sharpness/figs/'
 work_path = rootpath+'Onedrive/Work/nike/'
-
+sys.path.append(work_path)
 
 matplotlib.rcParams["font.size"] = 7.5
 matplotlib.rcParams['font.family'] = 'Serif'
@@ -77,3 +81,4 @@ def mnras_size(column="one", square=False, ratio=None):
         fig_height = fig_width*ratio
     return [fig_width,fig_height]
 
+errstyle = {'capsize':2, 'ecolor':grey, 'elinewidth':1, 'capthick':1, 'linestyle':'None'}

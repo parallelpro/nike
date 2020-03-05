@@ -5,20 +5,20 @@ mass/metallicity).
 
 '''
 if __name__ == "__main__":
-        rootpath = "/mnt/c/Users/yali4742/Dropbox (Sydney Uni)/Work/nike/"#"/headnode2/yali4742/nike/"#
+        rootpath = "/Users/yaguang/Onedrive/Work/nike/"#"/mnt/c/Users/yali4742/Dropbox (Sydney Uni)/Work/nike/"#"/headnode2/yali4742/nike/"#
         import numpy as np 
         import matplotlib
         matplotlib.use("Agg")
         import sys
         sys.path.append(rootpath) 
         from lib.histdist import model6
-        from lib.wrapper import sharpness_fit_perturb_mcmc, sharpness_fit_rescale_mcmc
+        from lib.wrapper import sharpness_fit_perturb_llim_mcmc, sharpness_fit_perturb_ulim_mcmc#sharpness_fit_rescale_mcmc
         import os
- 
+     
         # fdnu corrected sharma+2016
         obsdir = rootpath+"sample/yu/"
         moddir = rootpath+"sample/padova/"
-
+        
         # read in unperturbed mass and radius, with edges
         obs = np.load(obsdir+"yu18.npy", allow_pickle=True).tolist()
         edges_obs = np.load(obsdir+"tnu_edge_samples.npy")
@@ -29,47 +29,52 @@ if __name__ == "__main__":
         edges_pdv = np.load(moddir+"tnu_edge_samples.npy")
         tck_pdv, tp_pdv = np.load(moddir+"nike_spline_tck.npy", allow_pickle=True)
 
-        # to exclude those points which lies left to the edge (so no vertical distance).
-        idx = obs["numax"]>=np.min(edges_obs[:,0])
+        # to exclude those points which lies below the edge (so no horizontal distance).
+        idx = obs["dnu"]>=np.min(edges_obs[:,1])
         for key in obs.keys():
                 obs[key] = obs[key][idx]
 
-        idx = pdv["numax"]>=np.min(edges_pdv[:,0])
+        idx = pdv["dnu"]>=np.min(edges_pdv[:,1])
         for key in pdv.keys():
                 pdv[key] = pdv[key][idx]
 
-        distance = "vertical"
+        distance = "horizontal"
         diagram = "tnu"
         hist_model = model6()
 
         montecarlo = 120
 
-        # trial 1: obtain an lower limit of dnu relations
-        # trial 1.1: no binning
+        # trial 1: obtain an lower limit of numax relations
+        # trial 1.1: upper limit
         xobs, yobs = obs["numax"], obs["dnu"]
         e_xobs, e_yobs = obs["e_numax"], obs["e_dnu"]
-        e_xobs, e_yobs = e_xobs/xobs, e_yobs/yobs        
+        e_xobs, e_yobs = e_xobs/xobs, e_yobs/yobs
         idx = (obs["mass"]<=1.9) & (obs["mass"]>=0.8) #& (yobs<=(yedge_obs.max()))
         xobs, yobs, e_xobs, e_yobs = xobs[idx], yobs[idx], e_xobs[idx], e_yobs[idx]
-        
+
         xpdv, ypdv = pdv["numax"], pdv["dnu"]
         idx = (pdv["mass"]<=1.9) & (pdv["mass"]>=0.8) #& (radius<=yedge_pdv.max())#
         xpdv, ypdv= xpdv[idx], ypdv[idx]
 
 
-        filepath = rootpath+"sample/sharpness/sharma16/dnu/perturb/"
+        # filepath = rootpath+"sample/sharpness/sharma16/numax/ulim/"
+        # if not os.path.exists(filepath): os.mkdir(filepath)
+        # sharpness_fit_perturb_ulim_mcmc(xobs, yobs, edges_obs, tck_obs, tp_obs,
+        #         xpdv, ypdv, edges_pdv, tck_pdv, tp_pdv,
+        #         diagram, distance, hist_model, filepath, ifmcmc=True)
+
+        filepath = rootpath+"sample/sharpness/sharma16/numax/llim/"
         if not os.path.exists(filepath): os.mkdir(filepath)
-        sharpness_fit_perturb_mcmc(xobs, yobs, edges_obs, tck_obs, tp_obs,
+        sharpness_fit_perturb_llim_mcmc(xobs, yobs, e_xobs, edges_obs, tck_obs, tp_obs,
                 xpdv, ypdv, edges_pdv, tck_pdv, tp_pdv,
                 diagram, distance, hist_model, filepath, ifmcmc=True)
-
 
         # trial 1.2: demonstrate observational errors, no binns
-        filepath = rootpath+"sample/sharpness/sharma16/dnu/rescale/"
-        if not os.path.exists(filepath): os.mkdir(filepath)
-        sharpness_fit_rescale_mcmc(xobs, yobs, e_yobs, edges_obs, tck_obs, tp_obs,
-                xpdv, ypdv, edges_pdv, tck_pdv, tp_pdv,
-                diagram, distance, hist_model, filepath, ifmcmc=True)
+        # filepath = rootpath+"sample/sharpness/sharma16/numax/rescale/"
+        # if not os.path.exists(filepath): os.mkdir(filepath)
+        # sharpness_fit_rescale_mcmc(xobs, yobs, e_xobs, edges_obs, tck_obs, tp_obs,
+        #         xpdv, ypdv, edges_pdv, tck_pdv, tp_pdv,
+        #         diagram, distance, hist_model, filepath, ifmcmc=True)
 
 
         # # trial 1.3: mass effect
@@ -90,21 +95,21 @@ if __name__ == "__main__":
         #         idx = (pdv["mass"]>=masses[0][ibin]) & (pdv["mass"]<=masses[1][ibin])
         #         ixpdv, iypdv = pdv["numax"][idx], pdv["dnu"][idx]
 
-        #         filepath = rootpath+"sample/sharpness/sharma16/dnu_mass/perturb/"
+        #         filepath = rootpath+"sample/sharpness/sharma16/numax_mass/perturb/"
         #         if not os.path.exists(filepath): os.mkdir(filepath)
-        #         filepath = rootpath+"sample/sharpness/sharma16/dnu_mass/perturb/{:0.0f}/".format(ibin)
+        #         filepath = rootpath+"sample/sharpness/sharma16/numax_mass/perturb/{:0.0f}/".format(ibin)
         #         if not os.path.exists(filepath): os.mkdir(filepath)
 
         #         sharpness_fit_perturb_mcmc(ixobs, iyobs, edges_obs, tck_obs, tp_obs,
         #                 ixpdv, iypdv, edges_pdv, tck_pdv, tp_pdv,
         #                 diagram, distance, hist_model, filepath, ifmcmc=True)
 
-        #         filepath = rootpath+"sample/sharpness/sharma16/dnu_mass/rescale/"
+        #         filepath = rootpath+"sample/sharpness/sharma16/numax_mass/rescale/"
         #         if not os.path.exists(filepath): os.mkdir(filepath)
-        #         filepath = rootpath+"sample/sharpness/sharma16/dnu_mass/rescale/{:0.0f}/".format(ibin)
+        #         filepath = rootpath+"sample/sharpness/sharma16/numax_mass/rescale/{:0.0f}/".format(ibin)
         #         if not os.path.exists(filepath): os.mkdir(filepath)
 
-        #         sharpness_fit_rescale_mcmc(ixobs, iyobs, ie_yobs, edges_obs, tck_obs, tp_obs,
+        #         sharpness_fit_rescale_mcmc(ixobs, iyobs, ie_xobs, edges_obs, tck_obs, tp_obs,
         #                 ixpdv, iypdv, edges_pdv, tck_pdv, tp_pdv,
         #                 diagram, distance, hist_model, filepath, ifmcmc=True)
 
@@ -115,7 +120,7 @@ if __name__ == "__main__":
         # # zvalue_limits = [[-3.0, -0.20, 0.02],
         # #                 [-0.20, 0.02, 1.0]]
         # zvalue_name = "feh"
-
+ 
         # for ibin in range(Nbin):
         #         # read in unperturbed mass and radius, with edges
         #         iobs = np.load(obsdir+"feh/{:0.0f}/apk18.npy".format(ibin), allow_pickle=True).tolist()
@@ -127,12 +132,12 @@ if __name__ == "__main__":
         #         iedges_pdv = np.load(moddir+"feh/{:0.0f}/tnu_edge_samples.npy".format(ibin))
         #         itck_pdv, itp_pdv = np.load(moddir+"feh/{:0.0f}/nike_spline_tck.npy".format(ibin), allow_pickle=True)       
 
-        #         # to exclude those points which lies left to the edge (so no vertical distance).
-        #         idx = iobs["numax"]>=np.min(iedges_obs[:,0])
+        #         # to exclude those points which lies below the edge (so no horizontal distance).
+        #         idx = iobs["dnu"]>np.min(iedges_obs[:,1])
         #         for key in iobs.keys():
         #                 iobs[key] = iobs[key][idx]
 
-        #         idx = ipdv["numax"]>=np.min(iedges_pdv[:,0])
+        #         idx = ipdv["dnu"]>np.min(iedges_pdv[:,1])
         #         for key in ipdv.keys():
         #                 ipdv[key] = ipdv[key][idx]
 
@@ -142,68 +147,20 @@ if __name__ == "__main__":
 
         #         ixpdv, iypdv = ipdv["numax"], ipdv["dnu"]
 
-        #         filepath = rootpath+"sample/sharpness/sharma16/dnu_feh/perturb/"
+        #         filepath = rootpath+"sample/sharpness/sharma16/numax_feh/perturb/"
         #         if not os.path.exists(filepath): os.mkdir(filepath)
-        #         filepath = rootpath+"sample/sharpness/sharma16/dnu_feh/perturb/{:0.0f}/".format(ibin)
+        #         filepath = rootpath+"sample/sharpness/sharma16/numax_feh/perturb/{:0.0f}/".format(ibin)
         #         if not os.path.exists(filepath): os.mkdir(filepath)
 
         #         sharpness_fit_perturb_mcmc(ixobs, iyobs, iedges_obs, itck_obs, itp_obs,
         #                 ixpdv, iypdv, iedges_pdv, itck_pdv, itp_pdv,
         #                 diagram, distance, hist_model, filepath, ifmcmc=True)
 
-        #         filepath = rootpath+"sample/sharpness/sharma16/dnu_feh/rescale/"
+        #         filepath = rootpath+"sample/sharpness/sharma16/numax_feh/rescale/"
         #         if not os.path.exists(filepath): os.mkdir(filepath)
-        #         filepath = rootpath+"sample/sharpness/sharma16/dnu_feh/rescale/{:0.0f}/".format(ibin)
+        #         filepath = rootpath+"sample/sharpness/sharma16/numax_feh/rescale/{:0.0f}/".format(ibin)
         #         if not os.path.exists(filepath): os.mkdir(filepath)
 
-        #         sharpness_fit_rescale_mcmc(ixobs, iyobs, ie_yobs, iedges_obs, itck_obs, itp_obs,
+        #         sharpness_fit_rescale_mcmc(ixobs, iyobs, ie_xobs, iedges_obs, itck_obs, itp_obs,
         #                 ixpdv, iypdv, iedges_pdv, itck_pdv, itp_pdv,
         #                 diagram, distance, hist_model, filepath, ifmcmc=True)
-
-
-        # # trial 1.5: using uncorrected dnu relations
-        # # fdnu corrected sharma+2016
-        # obsdir = rootpath+"sample/yu_nc/"
-        # moddir = rootpath+"sample/padova_nc/"
-
-        # # read in unperturbed mass and radius, with edges
-        # obs = np.load(obsdir+"yu18.npy")
-        # edges_obs = np.load(obsdir+"tnu_edge_samples.npy")
-        # tck_obs, tp_obs = np.load(obsdir+"nike_spline_tck.npy", allow_pickle=True)
-
-        # # read in unperturbed mass and radius, with edges
-        # pdv = np.load(moddir+"padova.npy")
-        # edges_pdv = np.load(moddir+"tnu_edge_samples.npy")
-        # tck_pdv, tp_pdv = np.load(moddir+"nike_spline_tck.npy", allow_pickle=True)
-
-        # # to exclude those points which lies left to the edge (so no vertical distance).
-        # idx = obs["numax"]>=np.min(edges_obs[:,0])
-        # for key in obs.keys():
-        #         obs[key] = obs[key][idx]
-
-        # idx = pdv["numax"]>=np.min(edges_pdv[:,0])
-        # for key in pdv.keys():
-        #         pdv[key] = pdv[key][idx]
-
-        # distance = "vertical"
-        # diagram = "tnu"
-        # hist_model = model6()
-
-        # montecarlo = 120
-
-        # xobs, yobs = obs["numax"], obs["dnu"]
-        # e_xobs, e_yobs = obs["e_numax"], obs["e_dnu"]
-        # e_xobs, e_yobs = e_xobs/xobs, e_yobs/yobs           
-        # # idx = (xobs<=2.2) #& (yobs<=(yedge_obs.max()))
-        # # xobs, yobs = xobs[idx], yobs[idx]
-        # # e_xobs, e_yobs = e_xobs[idx], e_yobs[idx]
-        
-        # xpdv, ypdv = pdv["numax"], pdv["dnu"]
-        # # idx = (xpdv<=1.9) #& (radius<=yedge_pdv.max())#
-        # # xpdv, ypdv= xpdv[idx], ypdv[idx]
-
-        # filepath = rootpath+"sample/sharpness/kb95/dnu/perturb/"
-        # if not os.path.exists(filepath): os.mkdir(filepath)
-        # sharpness_fit_perturb_mcmc(xobs, yobs, edges_obs, tck_obs, tp_obs,
-        #         xpdv, ypdv, edges_pdv, tck_pdv, tp_pdv,
-        #         diagram, distance, hist_model, filepath, ifmcmc=True)

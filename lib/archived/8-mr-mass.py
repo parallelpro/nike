@@ -5,14 +5,14 @@ mass/metallicity).
 
 '''
 if __name__ == "__main__":
-        rootpath = "/mnt/c/Users/yali4742/Dropbox (Sydney Uni)/Work/nike/"#"/headnode2/yali4742/nike/"#
+        rootpath = "/Users/yaguang/Onedrive/Work/nike/"#"/mnt/c/Users/yali4742/Dropbox (Sydney Uni)/Work/nike/"#"/headnode2/yali4742/nike/"#
         import numpy as np 
         import matplotlib
         matplotlib.use("Agg")
         import sys
         sys.path.append(rootpath) 
         from lib.histdist import model6
-        from lib.wrapper import sharpness_fit_perturb_mcmc, sharpness_fit_rescale_mcmc
+        from lib.wrapper import sharpness_fit_perturb_llim_mcmc, sharpness_fit_perturb_ulim_mcmc
         import os
   
         # fdnu corrected sharma+2016
@@ -46,9 +46,9 @@ if __name__ == "__main__":
         montecarlo = 120
 
         # trial 1: obtain an lower limit of mass relations
-        # trial 1.1: no binning
-        xobs, yobs = obs["mass"], obs["radius"]
-        e_xobs, e_yobs = obs["e_mass"], obs["e_radius"]
+        # trial 1.1: upper limit
+        xobs, yobs = apk["mass"], apk["radius"]
+        e_xobs, e_yobs = apk["e_mass"], apk["e_radius"]
         e_xobs, e_yobs = e_xobs/xobs, e_yobs/yobs
         idx = (xobs<=1.9) & (xobs>=0.8)
         xobs, yobs, e_xobs, e_yobs = xobs[idx], yobs[idx], e_xobs[idx], e_yobs[idx]
@@ -58,19 +58,24 @@ if __name__ == "__main__":
         xpdv, ypdv= xpdv[idx], ypdv[idx]
 
 
-        filepath = rootpath+"sample/sharpness/sharma16/mass/perturb/"
+        # filepath = rootpath+"sample/sharpness/sharma16/mass/ulim/"
+        # if not os.path.exists(filepath): os.mkdir(filepath)
+        # sharpness_fit_perturb_ulim_mcmc(xobs, yobs, edges_obs, tck_obs, tp_obs,
+        #         xpdv, ypdv, edges_pdv, tck_pdv, tp_pdv,
+        #         diagram, distance, hist_model, filepath, ifmcmc=True)
+
+        filepath = rootpath+"sample/sharpness/sharma16/mass/llim/"
         if not os.path.exists(filepath): os.mkdir(filepath)
-        sharpness_fit_perturb_mcmc(xobs, yobs, edges_obs, tck_obs, tp_obs,
+        sharpness_fit_perturb_llim_mcmc(xobs, yobs, e_xobs, edges_obs, tck_obs, tp_obs,
                 xpdv, ypdv, edges_pdv, tck_pdv, tp_pdv,
                 diagram, distance, hist_model, filepath, ifmcmc=True)
 
-
-        # trial 1.2: demonstrate observational errors, no binnings
-        filepath = rootpath+"sample/sharpness/sharma16/mass/rescale/"
-        if not os.path.exists(filepath): os.mkdir(filepath)
-        sharpness_fit_rescale_mcmc(xobs, yobs, e_xobs, edges_obs, tck_obs, tp_obs,
-                xpdv, ypdv, edges_pdv, tck_pdv, tp_pdv,
-                diagram, distance, hist_model, filepath, ifmcmc=True)
+        # # trial 1.2: demonstrate observational errors, no binnings
+        # filepath = rootpath+"sample/sharpness/sharma16/mass/rescale/"
+        # if not os.path.exists(filepath): os.mkdir(filepath)
+        # sharpness_fit_rescale_mcmc(xobs, yobs, e_xobs, edges_obs, tck_obs, tp_obs,
+        #         xpdv, ypdv, edges_pdv, tck_pdv, tp_pdv,
+        #         diagram, distance, hist_model, filepath, ifmcmc=True)
 
 
         # # trial 1.3: mass effect

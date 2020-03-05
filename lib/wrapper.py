@@ -9,7 +9,7 @@ rootpath = "/headnode2/yali4742/nike/"
 
 import numpy as np 
 import matplotlib
-matplotlib.use("Agg")
+# matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import sys
 sys.path.append(rootpath) 
@@ -63,14 +63,14 @@ def simulation(imc, Ndata, xp, yp, scalar, xpdv, ypdv, xedge_pdv, yedge_pdv, tck
     return xdata, ydata, obj, sharpness_pdv
 
 
-def sharpness_fit_perturb_mcmc(xobso, yobso, edges_obs, tck_obs, tp_obs,
+def sharpness_fit_perturb_ulim_mcmc(xobso, yobso, edges_obs, tck_obs, tp_obs,
         xpdvo, ypdvo, edges_pdv, tck_pdv, tp_pdv,
-        diagram, distance, hist_model, filepath, ifmcmc=False):
+        diagram, distance, hist_model, filepath, ifmcmc=False, nburn=None, nsteps=None):
     
     print("diagram:",diagram)
     print("distance:",distance)
 
-    global model, lnprior, lnlikelihood, minus_lnlikelihood, lnpost, obj_obs, obj_pdv, xpdv, ypdv, Ndata, weight
+    global obj_obs, obj_pdv, xpdv, ypdv, Ndata, weight, model, lnprior, lnlikelihood, minus_lnlikelihood, lnpost
     global fp
     # filepath
     tfilepath = filepath
@@ -96,12 +96,18 @@ def sharpness_fit_perturb_mcmc(xobso, yobso, edges_obs, tck_obs, tp_obs,
     obj_pdv.fit(ifmcmc=False)
 
     # run mcmc with ensemble sampler
-    ndim, nwalkers, nburn, nsteps = 2, 200, 2000, 1000
+    ndim, nwalkers = 2, 200
+    nburn = 2000 if (nburn is None) else nburn
+    nsteps = 1000 if (nsteps is None) else nsteps
 
     para_names = ["shift", "scatter"]
     xd = np.abs(obj_obs.para_fit[1]-obj_pdv.para_fit[1])
-    para_limits = [[-3*xd, 3*xd], [0., 0.20]]
-    para_guess = [0., 0.005]
+    if diagram == "tnu":
+        para_limits = [[-3*xd, 3*xd], [0., 0.08]]
+        para_guess = [0., 0.005]
+    else:
+        para_limits = [[-3*xd, 3*xd], [0., 0.20]]
+        para_guess = [0., 0.005]  
 
     Ndata = xpdv.shape[0]
 
@@ -119,7 +125,7 @@ def sharpness_fit_perturb_mcmc(xobso, yobso, edges_obs, tck_obs, tp_obs,
         # "horizontal"
         fx2_base = np.random.normal(size=Ndata)
         fp = xpdv*fx2_base
-   
+ 
 
     def model(theta):#, obj_obs, xpdv, ypdv):
 
@@ -176,25 +182,25 @@ def sharpness_fit_perturb_mcmc(xobso, yobso, edges_obs, tck_obs, tp_obs,
         # pos0=[para_guess + 1.0e-8*np.random.randn(ndim) for j in range(nwalkers)]
         pos0 = [np.array([np.random.uniform(low=para_limits[idim][0], high=para_limits[idim][1]) for idim in range(ndim)]) for iwalker in range(nwalkers)]
 
-        with Pool() as pool:
+        # with Pool() as pool:
         # if True:
-            # sampler = emcee.EnsembleSampler(nwalkers, ndim, lnpost) #, pool=pool #, args=(para_limits, obj_obs, xpdv, ypdv))
-            sampler = emcee.EnsembleSampler(nwalkers, ndim, lnpost, pool=pool) #, args=(para_limits, obj_obs, xpdv, ypdv))
-            # # burn-in
-            print("start burning in. nburn:", nburn)
-            for j, result in enumerate(sampler.sample(pos0, iterations=nburn, thin=10)):
-                    display_bar(j, nburn)
-                    pass
-            sys.stdout.write("\n")
-            pos, _, _ = result
-            sampler.reset()
+        # sampler = emcee.EnsembleSampler(nwalkers, ndim, lnpost) #, pool=pool #, args=(para_limits, obj_obs, xpdv, ypdv))
+        sampler = emcee.EnsembleSampler(nwalkers, ndim, lnpost)#, pool=pool) #, args=(para_limits, obj_obs, xpdv, ypdv))
+        # # burn-in
+        print("start burning in. nburn:", nburn)
+        for j, result in enumerate(sampler.sample(pos0, iterations=nburn, thin=10)):
+                display_bar(j, nburn)
+                pass
+        sys.stdout.write("\n")
+        pos, _, _ = result
+        sampler.reset()
 
-            # actual iteration
-            print("start iterating. nsteps:", nsteps)
-            for j, result in enumerate(sampler.sample(pos, iterations=nsteps)):
-                    display_bar(j, nsteps)
-                    pass
-            sys.stdout.write("\n")
+        # actual iteration
+        print("start iterating. nsteps:", nsteps)
+        for j, result in enumerate(sampler.sample(pos, iterations=nsteps)):
+                display_bar(j, nsteps)
+                pass
+        sys.stdout.write("\n")
 
         # modify samples
         samples = sampler.chain[:,:,:].reshape((-1,ndim))
@@ -209,6 +215,7 @@ def sharpness_fit_perturb_mcmc(xobso, yobso, edges_obs, tck_obs, tp_obs,
         # corner plot
         fig = corner.corner(samples, labels=para_names, show_titles=True)
         plt.savefig(tfilepath+"corner.png")
+        plt.close()
 
     else: 
         res = basinhopping(minus_lnlikelihood, para_guess, minimizer_kwargs={"bounds":para_limits})
@@ -288,17 +295,15 @@ def sharpness_fit_perturb_mcmc(xobso, yobso, edges_obs, tck_obs, tp_obs,
     np.save(tfilepath+"data", data)
     return
 
-
-
-def sharpness_fit_rescale_mcmc(xobso, yobso, eobso, edges_obs, tck_obs, tp_obs,
+def sharpness_fit_perturb_llim_mcmc(xobso, yobso, eobso, edges_obs, tck_obs, tp_obs,
         xpdvo, ypdvo, edges_pdv, tck_pdv, tp_pdv,
-        diagram, distance, hist_model, filepath, ifmcmc=False):
+        diagram, distance, hist_model, filepath, ifmcmc=False, nburn=None, nsteps=None):
     
     print("diagram:",diagram)
     print("distance:",distance)
 
-    global model, lnprior, lnlikelihood, minus_lnlikelihood, lnpost, obj_obs, obj_pdv, xpdv, ypdv, Ndata, weight
-    global fp
+    global obj_obs, obj_pdv, xpdv, ypdv, Ndata, weight, model, lnprior, lnlikelihood, minus_lnlikelihood, lnpost
+    global fp1, fp2
     # filepath
     tfilepath = filepath
 
@@ -323,12 +328,18 @@ def sharpness_fit_rescale_mcmc(xobso, yobso, eobso, edges_obs, tck_obs, tp_obs,
     obj_pdv.fit(ifmcmc=False)
 
     # run mcmc with ensemble sampler
-    ndim, nwalkers, nburn, nsteps = 2, 200, 2000, 1000
+    ndim, nwalkers = 2, 200
+    nburn = 2000 if (nburn is None) else nburn
+    nsteps = 1000 if (nsteps is None) else nsteps
 
-    para_names = ["shift", "scale_factor"]
+    para_names = ["shift", "scatter"]
     xd = np.abs(obj_obs.para_fit[1]-obj_pdv.para_fit[1])
-    para_limits = [[-3*xd, 3*xd], [0., 3.0]]
-    para_guess = [0., 1.0]
+    if diagram == "tnu":
+        para_limits = [[-3*xd, 3*xd], [0., 0.08]]
+        para_guess = [0., 0.005]
+    else:
+        para_limits = [[-3*xd, 3*xd], [0., 0.20]]
+        para_guess = [0., 0.005]        
 
     Ndata = xpdv.shape[0]
 
@@ -340,13 +351,17 @@ def sharpness_fit_rescale_mcmc(xobso, yobso, eobso, edges_obs, tck_obs, tp_obs,
 
     if distance=="vertical":
         fy1_base = np.random.normal(size=Ndata) * 10.0**scipy.signal.resample(np.log10(eobs), Ndata)
-        fp = ypdv*fy1_base
+        fp1 = ypdv*fy1_base
+        fy2_base = np.random.normal(size=Ndata)
+        fp2 = ypdv*fy2_base
     else:
         # fx1 = np.array([random.gauss(0,1) for i in range(Ndata)]) * 10.0**scipy.signal.resample(np.log10(e_xobs), Ndata) * scalar
         # "horizontal"
         fx1_base = np.random.normal(size=Ndata) * 10.0**scipy.signal.resample(np.log10(eobs), Ndata)
-        fp = xpdv*fx1_base
-   
+        fp1 = xpdv*fx1_base
+        fx2_base = np.random.normal(size=Ndata)
+        fp2 = xpdv*fx2_base
+
 
     def model(theta):#, obj_obs, xpdv, ypdv):
 
@@ -356,7 +371,7 @@ def sharpness_fit_rescale_mcmc(xobso, yobso, eobso, edges_obs, tck_obs, tp_obs,
         # disturb with artificial scatter
         # xdata, ydata = (xpdv + xpdv*(fx2_base*theta[1])), (ypdv + ypdv*(fy2_base*theta[1]))
 
-        hdist = hdist_pdv + fp*theta[1]
+        hdist = hdist_pdv + fp1 + fp2*theta[1]
         hdist = hdist + theta[0]
         obj = distfit(hdist, hist_model, bins=obj_obs.bins)
 
@@ -403,25 +418,25 @@ def sharpness_fit_rescale_mcmc(xobso, yobso, eobso, edges_obs, tck_obs, tp_obs,
         # pos0=[para_guess + 1.0e-8*np.random.randn(ndim) for j in range(nwalkers)]
         pos0 = [np.array([np.random.uniform(low=para_limits[idim][0], high=para_limits[idim][1]) for idim in range(ndim)]) for iwalker in range(nwalkers)]
 
-        with Pool() as pool:
+        # with Pool() as pool:
         # if True:
-            # sampler = emcee.EnsembleSampler(nwalkers, ndim, lnpost) #, pool=pool #, args=(para_limits, obj_obs, xpdv, ypdv))
-            sampler = emcee.EnsembleSampler(nwalkers, ndim, lnpost, pool=pool) #, args=(para_limits, obj_obs, xpdv, ypdv))
-            # # burn-in
-            print("start burning in. nburn:", nburn)
-            for j, result in enumerate(sampler.sample(pos0, iterations=nburn, thin=10)):
-                    display_bar(j, nburn)
-                    pass
-            sys.stdout.write("\n")
-            pos, _, _ = result
-            sampler.reset()
+        # sampler = emcee.EnsembleSampler(nwalkers, ndim, lnpost) #, pool=pool #, args=(para_limits, obj_obs, xpdv, ypdv))
+        sampler = emcee.EnsembleSampler(nwalkers, ndim, lnpost)#, pool=pool) #, args=(para_limits, obj_obs, xpdv, ypdv))
+        # # burn-in
+        print("start burning in. nburn:", nburn)
+        for j, result in enumerate(sampler.sample(pos0, iterations=nburn, thin=10)):
+                display_bar(j, nburn)
+                pass
+        sys.stdout.write("\n")
+        pos, _, _ = result
+        sampler.reset()
 
-            # actual iteration
-            print("start iterating. nsteps:", nsteps)
-            for j, result in enumerate(sampler.sample(pos, iterations=nsteps)):
-                    display_bar(j, nsteps)
-                    pass
-            sys.stdout.write("\n")
+        # actual iteration
+        print("start iterating. nsteps:", nsteps)
+        for j, result in enumerate(sampler.sample(pos, iterations=nsteps)):
+                display_bar(j, nsteps)
+                pass
+        sys.stdout.write("\n")
 
         # modify samples
         samples = sampler.chain[:,:,:].reshape((-1,ndim))
@@ -436,6 +451,7 @@ def sharpness_fit_rescale_mcmc(xobso, yobso, eobso, edges_obs, tck_obs, tp_obs,
         # corner plot
         fig = corner.corner(samples, labels=para_names, show_titles=True)
         plt.savefig(tfilepath+"corner.png")
+        plt.close()
 
     else: 
         res = basinhopping(minus_lnlikelihood, para_guess, minimizer_kwargs={"bounds":para_limits})
@@ -461,9 +477,9 @@ def sharpness_fit_rescale_mcmc(xobso, yobso, eobso, edges_obs, tck_obs, tp_obs,
 
     if distance=="vertical":
         xdata = xpdv
-        ydata = ypdv + fp*para_fit[1]
+        ydata = ypdv + fp1 + fp2*para_fit[1]
     else:
-        xdata = xpdv + fp*para_fit[1]
+        xdata = xpdv + fp1 + fp2*para_fit[1]
         ydata = ypdv
 
     xfit, yfit = xdata[idx], ydata[idx]
@@ -475,7 +491,7 @@ def sharpness_fit_rescale_mcmc(xobso, yobso, eobso, edges_obs, tck_obs, tp_obs,
 
     alignment = {"ha":"left", "va":"top", "transform":axes[0].transAxes}
     axes[0].text(0.01, 0.95, "Offset: {:0.2f} (initial: {:0.2f})".format(para_fit[0], para_guess[0]), **alignment)
-    axes[0].text(0.01, 0.90, "Scale factor: {:0.2f}% (initial: {:0.2f}%)".format(para_fit[1]*100, para_guess[1]*100), **alignment) 
+    axes[0].text(0.01, 0.90, "Scatter: {:0.2f}% (initial: {:0.2f}%)".format(para_fit[1]*100, para_guess[1]*100), **alignment) 
     axes[0].text(0.01, 0.85, "Diagram: {:s}".format(diagram), **alignment)
     axes[0].text(0.01, 0.80, "Distance: {:s}".format(distance), **alignment)
 
@@ -514,6 +530,233 @@ def sharpness_fit_rescale_mcmc(xobso, yobso, eobso, edges_obs, tck_obs, tp_obs,
 
     np.save(tfilepath+"data", data)
     return
+
+
+# def sharpness_fit_rescale_mcmc(xobso, yobso, eobso, edges_obs, tck_obs, tp_obs,
+#         xpdvo, ypdvo, edges_pdv, tck_pdv, tp_pdv,
+#         diagram, distance, hist_model, filepath, ifmcmc=False):
+    
+#     print("diagram:",diagram)
+#     print("distance:",distance)
+
+#     global obj_obs, obj_pdv, xpdv, ypdv, Ndata, weight
+#     #model, lnprior, lnlikelihood, minus_lnlikelihood, lnpost, 
+#     global fp
+#     # filepath
+#     tfilepath = filepath
+
+#     # set up observations
+#     xedge_obs, yedge_obs = edges_obs[:,0], edges_obs[:,1]
+#     xobs, yobs, eobs = xobso, yobso, eobso
+
+#     # set up models
+#     xedge_pdv, yedge_pdv = edges_pdv[:,0], edges_pdv[:,1]
+#     xpdv, ypdv = xpdvo, ypdvo
+
+
+#     # calculate Kepler distance
+#     hdist_obs, xobs, yobs = distance_to_edge(xobs, yobs, xedge_obs, yedge_obs, tck_obs, tp_obs, diagram=diagram, distance=distance)
+#     obj_obs = distfit(hdist_obs, hist_model)
+#     obj_obs = distfit(hdist_obs, hist_model, bins=obj_obs.bins)
+#     obj_obs.fit(ifmcmc=False)
+
+#     # calculate Galaxia distance
+#     hdist_pdv, xpdv, ypdv = distance_to_edge(xpdv, ypdv, xedge_pdv, yedge_pdv, tck_pdv, tp_pdv, diagram=diagram, distance=distance)
+#     obj_pdv = distfit(hdist_pdv, hist_model, bins=obj_obs.bins)
+#     obj_pdv.fit(ifmcmc=False)
+
+#     # run mcmc with ensemble sampler
+#     ndim, nwalkers, nburn, nsteps = 2, 200, 2000, 1000
+
+#     para_names = ["shift", "scale_factor"]
+#     xd = np.abs(obj_obs.para_fit[1]-obj_pdv.para_fit[1])
+#     para_limits = [[-3*xd, 3*xd], [0., 3.0]]
+#     para_guess = [0., 1.0]
+
+#     Ndata = xpdv.shape[0]
+
+#     # tied to model6
+#     weight = np.zeros(obj_obs.histx.shape, dtype=bool)
+#     sigma, x0 = obj_obs.para_fit[0], obj_obs.para_fit[1]
+#     idx = (obj_obs.histx >= x0-3*sigma) & (obj_obs.histx <= x0+3*sigma)
+#     weight[idx] = True
+
+#     if distance=="vertical":
+#         fy1_base = np.random.normal(size=Ndata) * 10.0**scipy.signal.resample(np.log10(eobs), Ndata)
+#         fp = ypdv*fy1_base
+#     else:
+#         # fx1 = np.array([random.gauss(0,1) for i in range(Ndata)]) * 10.0**scipy.signal.resample(np.log10(e_xobs), Ndata) * scalar
+#         # "horizontal"
+#         fx1_base = np.random.normal(size=Ndata) * 10.0**scipy.signal.resample(np.log10(eobs), Ndata)
+#         fp = xpdv*fx1_base
+   
+
+#     def model(theta):#, obj_obs, xpdv, ypdv):
+
+#         # theta[0]: offset in distance
+#         # theta[1]: perturb
+
+#         # disturb with artificial scatter
+#         # xdata, ydata = (xpdv + xpdv*(fx2_base*theta[1])), (ypdv + ypdv*(fy2_base*theta[1]))
+
+#         hdist = hdist_pdv + fp*theta[1]
+#         hdist = hdist + theta[0]
+#         obj = distfit(hdist, hist_model, bins=obj_obs.bins)
+
+#         # normalize the number of points in the weighted region
+#         if np.sum(obj.histy[weight])!=0:
+#             number_reduction_factor = 1. / np.sum(obj.histy[weight])*np.sum(obj_obs.histy[weight])
+#         else:
+#             number_reduction_factor = 0.
+#         histy = obj.histy * number_reduction_factor
+#         return histy, hdist, number_reduction_factor
+
+#     def lnlikelihood(theta):#, obj_obs, xpdv, ypdv):
+#         histy, _, _ = model(theta)#, obj_obs, xpdv, ypdv)
+#         d, m = obj_obs.histy[weight], histy[weight]
+#         if m[m==0].shape[0] == 0:
+#             logdfact = scipy.special.gammaln(d+1) #np.array([np.sum(np.log(np.arange(1,id+0.1))) for id in d])
+#             lnL =  np.sum(d*np.log(m)-m-logdfact)
+#             # print(theta, lnL)
+#             return lnL
+#         else:
+#             # print(theta, "d")
+#             return -np.inf
+
+#     def minus_lnlikelihood(theta):
+#         return -lnlikelihood(theta)
+
+#     def lnprior(theta):#, para_limits):
+#         for i in range(len(theta)):
+#             if not (para_limits[i][0] <= theta[i] <= para_limits[i][1] ):
+#                 return -np.inf
+#         return 0.
+
+#     def lnpost(theta):#, para_limits, obj_obs, xpdv, ypdv):
+#         lp = lnprior(theta)#, para_limits)
+#         if np.isfinite(lp):
+#             lnL = lnlikelihood(theta)#, obj_obs, xpdv, ypdv)
+#             return lnL
+#         else:
+#             return -np.inf
+
+#     if ifmcmc:
+#         print("enabling Ensemble sampler.")
+#         print(para_guess)
+#         # pos0=[para_guess + 1.0e-8*np.random.randn(ndim) for j in range(nwalkers)]
+#         pos0 = [np.array([np.random.uniform(low=para_limits[idim][0], high=para_limits[idim][1]) for idim in range(ndim)]) for iwalker in range(nwalkers)]
+
+#         with Pool() as pool:
+#         # if True:
+#             # sampler = emcee.EnsembleSampler(nwalkers, ndim, lnpost) #, pool=pool #, args=(para_limits, obj_obs, xpdv, ypdv))
+#             sampler = emcee.EnsembleSampler(nwalkers, ndim, lnpost, pool=pool) #, args=(para_limits, obj_obs, xpdv, ypdv))
+#             # # burn-in
+#             print("start burning in. nburn:", nburn)
+#             for j, result in enumerate(sampler.sample(pos0, iterations=nburn, thin=10)):
+#                     display_bar(j, nburn)
+#                     pass
+#             sys.stdout.write("\n")
+#             pos, _, _ = result
+#             sampler.reset()
+
+#             # actual iteration
+#             print("start iterating. nsteps:", nsteps)
+#             for j, result in enumerate(sampler.sample(pos, iterations=nsteps)):
+#                     display_bar(j, nsteps)
+#                     pass
+#             sys.stdout.write("\n")
+
+#         # modify samples
+#         samples = sampler.chain[:,:,:].reshape((-1,ndim))
+
+#         # estimation result
+#         # 16, 50, 84 quantiles
+#         result = np.array(list(map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),
+#                 zip(*np.percentile(samples, [16, 50, 84],axis=0)))))
+#         para_fit = result[:,0]
+#         e_para_fit = (result[:,1]+result[:,2])/2.0
+
+#         # corner plot
+#         fig = corner.corner(samples, labels=para_names, show_titles=True)
+#         plt.savefig(tfilepath+"corner.png")
+
+#     else: 
+#         res = basinhopping(minus_lnlikelihood, para_guess, minimizer_kwargs={"bounds":para_limits})
+#         # res = minimize(minus_lnlikelihood, para_guess, bounds=para_limits)
+#         para_fit = res.x
+#         print(para_guess, para_fit)
+#         e_para_fit = None
+#         samples = None
+
+
+#     # result plot
+#     fig = plt.figure(figsize=(12,12))
+#     axes = fig.subplots(nrows=2, ncols=1)
+#     obj_obs.plot_hist(ax=axes[0], histkwargs={"color":"red", "label":"Kepler", "zorder":100})
+#     obj_obs.plot_fit(ax=axes[0], fitkwargs={"color":"black", "label":"Kepler fit", "linestyle":"--", "zorder":100})
+            
+#     # obj_pdv.plot_hist(ax=axes[0], histkwargs={"color":"green", "label":"Galaxia initial model"})
+
+#     # calculate best fitted results
+#     yfit, hdist, number_reduction_factor = model(para_fit)
+#     Ndata = hdist.shape[0]
+#     idx = reduce_samples(Ndata, Ndata*number_reduction_factor)
+
+#     if distance=="vertical":
+#         xdata = xpdv
+#         ydata = ypdv + fp*para_fit[1]
+#     else:
+#         xdata = xpdv + fp*para_fit[1]
+#         ydata = ypdv
+
+#     xfit, yfit = xdata[idx], ydata[idx]
+#     hdist_fit, xfit, yfit = distance_to_edge(xfit, yfit, xedge_pdv, yedge_pdv, tck_pdv, tp_pdv, diagram=diagram, distance=distance)
+#     hdist_fit = hdist_fit + para_fit[0]
+#     obj_fit = distfit(hdist_fit, hist_model, bins=obj_obs.bins)
+#     obj_fit.fit(ifmcmc=False)
+#     axes[0].step(obj_fit.histx, obj_fit.histy, **{"color":"blue", "label":"Galaxia best fitted model"})
+
+#     alignment = {"ha":"left", "va":"top", "transform":axes[0].transAxes}
+#     axes[0].text(0.01, 0.95, "Offset: {:0.2f} (initial: {:0.2f})".format(para_fit[0], para_guess[0]), **alignment)
+#     axes[0].text(0.01, 0.90, "Scale factor: {:0.2f}% (initial: {:0.2f}%)".format(para_fit[1]*100, para_guess[1]*100), **alignment) 
+#     axes[0].text(0.01, 0.85, "Diagram: {:s}".format(diagram), **alignment)
+#     axes[0].text(0.01, 0.80, "Distance: {:s}".format(distance), **alignment)
+
+#     axes[0].legend()
+
+#     axes[0].grid(True)
+#     axes[0].set_xlim(obj_obs.histx.min(), obj_obs.histx.max())
+#     axes[0].set_ylim(0., obj_obs.histy.max()*1.5)
+
+#     # diagram axes[1]
+#     axes[1].plot(xobs, yobs, "r.", ms=1)
+#     axes[1].plot(xfit, yfit, "b.", ms=1)
+#     axes[1].plot(xedge_obs, yedge_obs, "k--")
+#     axes[1].plot(xedge_pdv, yedge_pdv, "k-")
+#     axes[1].grid(True)
+#     if diagram=="mr":
+#         axes[1].axis([0., 3., 5., 20.])
+#     if diagram=="tnu":
+#         axes[1].axis([10, 150, 2.0, 10.0])
+
+#     # fill weighted region
+#     xmin_, xmax_ = obj_obs.histx[weight].min(), obj_obs.histx[weight].max()
+#     axes[0].fill_betweenx(axes[0].get_ylim(), [xmin_, xmin_], [xmax_, xmax_], color="lightgray")
+
+#     plt.savefig(tfilepath+"result.png")
+#     plt.close()
+
+
+#     # save data
+#     data = {"samples":samples, "ndim":ndim,
+#             "para_fit":para_fit, "e_para_fit":e_para_fit, "para_guess":para_guess,
+#             "diagram":diagram, "distance":distance, 
+#             "xobs":xobs, "yobs":yobs, "xpdv":xpdv, "ypdv":ypdv, "xfit":xfit, "yfit":yfit,
+#             "obj_obs":obj_obs, "obj_pdv":obj_pdv, "obj_fit":obj_fit,
+#             "number_reduction_factor":number_reduction_factor}
+
+#     np.save(tfilepath+"data", data)
+#     return
 
 
 

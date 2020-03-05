@@ -123,7 +123,8 @@ def reduce_samples(Ndata, Ntarget):
 #     return dist
 
 
-def distance_to_edge(xdata, ydata, xedge, yedge, tcks, tp, diagram="tnu", distance="vertical"):
+def distance_to_edge(xdata, ydata, xedge, yedge, tcks, tp, 
+                    diagram="tnu", distance="vertical", return_idx=False):
 
     if not (diagram in ["tnu", "mr"]):
         raise ValueError("diagram should be in ['tnu', 'mr']")
@@ -133,8 +134,8 @@ def distance_to_edge(xdata, ydata, xedge, yedge, tcks, tp, diagram="tnu", distan
 
     if distance=="vertical": #y
         if diagram=="tnu":
-            idx = (xdata >= xedge.min()) & (xdata <= tp[0])
-            xdata, ydata = xdata[idx], ydata[idx]
+            ridx = (xdata >= xedge.min()) & (xdata <= tp[0])
+            xdata, ydata = xdata[ridx], ydata[ridx]
             dist = np.zeros(xdata.shape[0])
 
             # first consider clumps, upper part
@@ -160,8 +161,8 @@ def distance_to_edge(xdata, ydata, xedge, yedge, tcks, tp, diagram="tnu", distan
                 dist[idx_data] = -(ydata[idx_data] - yedge[idx_edge][argdist]) 
 
         else:# diagram=="mr":
-            idx = (xdata<=tp[0])
-            xdata, ydata = xdata[idx], ydata[idx]
+            ridx = (xdata<=tp[0])
+            xdata, ydata = xdata[ridx], ydata[ridx]
             dist = np.zeros(xdata.shape[0])
 
             Xa = np.array([xdata]).T
@@ -173,8 +174,8 @@ def distance_to_edge(xdata, ydata, xedge, yedge, tcks, tp, diagram="tnu", distan
             
     if distance=="horizontal": #x
         if diagram=="tnu":
-            idx = (ydata >= yedge.min()) & (xdata <= tp[0])
-            xdata, ydata = xdata[idx], ydata[idx]
+            ridx = (ydata >= yedge.min()) & (xdata <= tp[0])
+            xdata, ydata = xdata[ridx], ydata[ridx]
             dist = np.zeros(xdata.shape[0])
             
             # first consider clumps, left part
@@ -210,8 +211,8 @@ def distance_to_edge(xdata, ydata, xedge, yedge, tcks, tp, diagram="tnu", distan
             #     dist[idx_data] = -(xdata[idx_data] - xedge[idx_edge][argdist]) 
             
         else:# diagram=="mr":
-            idx = (ydata <= yedge[xedge<tp[0]].max()) & (xdata<=tp[0])
-            xdata, ydata = xdata[idx], ydata[idx]
+            ridx = (ydata <= yedge[xedge<tp[0]].max()) & (xdata<=tp[0])
+            xdata, ydata = xdata[ridx], ydata[ridx]
             dist = np.zeros(xdata.shape[0])
 
             # first, consider left part of clumps
@@ -268,7 +269,10 @@ def distance_to_edge(xdata, ydata, xedge, yedge, tcks, tp, diagram="tnu", distan
 #         idx = idx_right & (xdata>=tp[0])
 #         dist[idx] = -dist[idx]
 
-    return dist, xdata, ydata
+    if not return_idx:
+        return dist, xdata, ydata
+    else:
+        return dist, xdata, ydata, ridx
 
 class model1:
     def __init__(self):
