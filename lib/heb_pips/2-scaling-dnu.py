@@ -13,8 +13,8 @@ import matplotlib
 # matplotlib.use("Agg")
 import sys
 sys.path.append(rootpath) 
-from lib.histdist import model6
-from lib.wrapper import sharpness_fit_perturb_llim_mcmc, sharpness_fit_perturb_ulim_mcmc#sharpness_fit_rescale_mcmc
+from lib.histdist import model_heb
+from lib.wrapper import heb_llim_fit, heb_ulim_fit#sharpness_fit_rescale_mcmc
 import os
 
 diagrams = ['tnu', 'tnu', 'mr', 'mr']
@@ -23,8 +23,8 @@ variables = ['numax', 'dnu', 'mass', 'radius']
 
 for i in range(1,4):
     # fdnu corrected sharma+2016
-    obsdir = rootpath+"sample/yu_nc/"
-    moddir = rootpath+"sample/padova_nc/"
+    obsdir = rootpath+"sample/heb/yu_nc/"
+    moddir = rootpath+"sample/heb/padova_nc/"
 
     diagram, distance, var = diagrams[i], distances[i], variables[i]
 
@@ -94,21 +94,21 @@ for i in range(1,4):
         e_xobs, e_yobs = obs["e_mass_nc"]/obs["mass_nc"], obs["e_radius_nc"]/obs["radius_nc"]
         xpdv, ypdv = pdv["mass"], pdv["radius"]
 
-    hist_model = model6()
+    hist_model = model_heb()
 
 
     # trial 1: upper limit
-    filepath = rootpath+"sample/sharpness/kb95/"+var+"/ulim/"
+    filepath = rootpath+"sample/heb/sharpness/kb95/"+var+"/ulim/"
     if not os.path.exists(filepath): os.mkdir(filepath)
-    sharpness_fit_perturb_ulim_mcmc(xobs, yobs, edges_obs, tck_obs, tp_obs,
-    xpdv, ypdv, edges_pdv, tck_pdv, tp_pdv,
-    diagram, distance, hist_model, filepath, ifmcmc=True, nburn=500, nsteps=1000)
+    heb_ulim_fit(xobs, yobs, edges_obs, tck_obs, tp_obs,
+        xpdv, ypdv, edges_pdv, tck_pdv, tp_pdv,
+        diagram, distance, hist_model, filepath, ifmcmc=True, nburn=500, nsteps=1000)
 
     # trial 2: lower limit
     eobs = e_xobs if distance=='horizontal' else e_yobs
-    filepath = rootpath+"sample/sharpness/kb95/"+var+"/llim/"
+    filepath = rootpath+"sample/heb/sharpness/kb95/"+var+"/llim/"
     if not os.path.exists(filepath): os.mkdir(filepath)
-    sharpness_fit_perturb_llim_mcmc(xobs, yobs, eobs, edges_obs, tck_obs, tp_obs,
-    xpdv, ypdv, edges_pdv, tck_pdv, tp_pdv,
-    diagram, distance, hist_model, filepath, ifmcmc=True, nburn=500, nsteps=1000)
+    heb_llim_fit(xobs, yobs, eobs, edges_obs, tck_obs, tp_obs,
+        xpdv, ypdv, edges_pdv, tck_pdv, tp_pdv,
+        diagram, distance, hist_model, filepath, ifmcmc=True, nburn=500, nsteps=1000)
 

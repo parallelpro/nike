@@ -35,8 +35,8 @@ def blues(n=10):
 if os.name == 'nt':
     rootpath = '/Users/yali4742/'
 else:
-    rootpath = '/Users/yaguang/'
-overleaf_path = rootpath+'Dropbox (Sydney Uni)/Apps/Overleaf/Yaguang_NIKE_sharpness/figs/'
+    rootpath = '/Volumes/Data/'
+overleaf_path = '/Users/yaguang/Dropbox (Sydney Uni)/Apps/Overleaf/Yaguang_NIKE_sharpness/figs/'
 work_path = rootpath+'Onedrive/Work/nike/'
 sys.path.append(work_path)
 

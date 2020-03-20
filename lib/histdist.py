@@ -12,9 +12,8 @@ import sys
 import emcee
 import corner
 
-__all__ = ["distfit", "model1", "model2", "model3", "model4",
-            "model5", "model5_prob", "model6_prob", 
-            "distance_to_edge", "reduce_samples"]
+__all__ = ["distfit", "model6", "model_rgb",
+            "distance_to_edge", "distance_to_bump", "reduce_samples"]
 
 def display_bar(j, nburn, width=30):
         n = int((width+1) * float(j) / nburn)
@@ -274,222 +273,239 @@ def distance_to_edge(xdata, ydata, xedge, yedge, tcks, tp,
     else:
         return dist, xdata, ydata, ridx
 
-class model1:
-    def __init__(self):
-        # model1
-        self.prior_guess = [[0., 1000.], [1e-6, 1.], [-1, 1.], [1e-6, 3.]]
-        self.para_guess = [500., 0.5, 0.5, 1.0]
-        self.para_name = ["H", "gamma", "x0", "tau"]
-        return
+def distance_to_bump(xdata, ydata, bump_points,
+                    distance="vertical", return_idx=False):
 
-    def ymodel(self, theta, x):
-        H, gamma, x0, tau = theta
-        # if (x is None): x = self.histx
-        ymodel = np.zeros(x.shape[0])
-        idx = x<x0
-        ymodel[idx] = H/((x[idx]-x0)**2./gamma**2. + 1)
-        idx = x>=x0
-        ymodel[idx] = H*np.exp(-(x[idx]-x0)/tau)
-        return ymodel
+    if not (distance in ["vertical", "horizontal"]):
+        raise ValueError("distance should be in ['vertical', 'horizontal']")
+    # Ndata, Nedge = xdata.shape[0], xedge.shape[0]
 
-    def sharpness(self, theta):
-        # metric 1: H/gamma
-        H, gamma = theta[0:2]
-        metric = H/gamma
-        return metric
+    k, b = bump_points
 
-class model2:
-    def __init__(self):
-        # # model2
-        self.prior_guess = [[0., 1000.], #H
-                            [1e-6, 3.], # tau1
-                            [-0.1, 0.3], # x0
-                            [1e-6, 3.], #tau2
-                            [0.3, 0.9], # x1
-                            [-10, -1e-10]] #k
-        self.para_guess = [500., 0.5, 0.1, 0.5, 0.7, -1]
-        self.para_name = ["H", "tau1", "x0", "tau2", "x1", "k"]
-        return
+    if distance=="vertical": #y
+        dist = ydata - (k*xdata + b)
+    if distance=="horizontal": #x         
+        dist = xdata - (ydata-b)/k
 
-    def ymodel(self, theta, x):
-        H, tau1, x0, tau2, x1, k = theta
-        # if (x is None): x = self.histx
-        ymodel = np.zeros(x.shape[0])
-        idx = x<x0
-        ymodel[idx] = H*np.exp((x[idx]-x0)/tau1)
-        idx = (x>=x0) & (x<x1)
-        ymodel[idx] = H*np.exp(-(x[idx]-x0)/tau2) 
-        idx = x>=x1
-        ymodel[idx] = k*(x[idx]-x1) + H*np.exp(-(x1-x0)/tau2)       
-        return ymodel    
+    return dist, xdata, ydata
 
-class model3:
-    def __init__(self):
-        # # model3
-        self.para_name = ["xc", "s", "H", "x0", "tau", "x1", "k"]
-        return
+
+# class model1:
+#     def __init__(self):
+#         # model1
+#         self.prior_guess = [[0., 1000.], [1e-6, 1.], [-1, 1.], [1e-6, 3.]]
+#         self.para_guess = [500., 0.5, 0.5, 1.0]
+#         self.para_name = ["H", "gamma", "x0", "tau"]
+#         return
+
+#     def ymodel(self, theta, x):
+#         H, gamma, x0, tau = theta
+#         # if (x is None): x = self.histx
+#         ymodel = np.zeros(x.shape[0])
+#         idx = x<x0
+#         ymodel[idx] = H/((x[idx]-x0)**2./gamma**2. + 1)
+#         idx = x>=x0
+#         ymodel[idx] = H*np.exp(-(x[idx]-x0)/tau)
+#         return ymodel
+
+#     def sharpness(self, theta):
+#         # metric 1: H/gamma
+#         H, gamma = theta[0:2]
+#         metric = H/gamma
+#         return metric
+
+# class model2:
+#     def __init__(self):
+#         # # model2
+#         self.prior_guess = [[0., 1000.], #H
+#                             [1e-6, 3.], # tau1
+#                             [-0.1, 0.3], # x0
+#                             [1e-6, 3.], #tau2
+#                             [0.3, 0.9], # x1
+#                             [-10, -1e-10]] #k
+#         self.para_guess = [500., 0.5, 0.1, 0.5, 0.7, -1]
+#         self.para_name = ["H", "tau1", "x0", "tau2", "x1", "k"]
+#         return
+
+#     def ymodel(self, theta, x):
+#         H, tau1, x0, tau2, x1, k = theta
+#         # if (x is None): x = self.histx
+#         ymodel = np.zeros(x.shape[0])
+#         idx = x<x0
+#         ymodel[idx] = H*np.exp((x[idx]-x0)/tau1)
+#         idx = (x>=x0) & (x<x1)
+#         ymodel[idx] = H*np.exp(-(x[idx]-x0)/tau2) 
+#         idx = x>=x1
+#         ymodel[idx] = k*(x[idx]-x1) + H*np.exp(-(x1-x0)/tau2)       
+#         return ymodel    
+
+# class model3:
+#     def __init__(self):
+#         # # model3
+#         self.para_name = ["xc", "s", "H", "x0", "tau", "x1", "k"]
+#         return
     
-    def set_priors(self, histx, histy, dist):
-        maximum_center = histx[histy==histy.max()][0]
-        self.prior_guess = [[(histx.min()+maximum_center)/2.,  0.8*maximum_center], #xc
-                            [0.2, 10.], # s
-                            [1e-6, histy.max()*2.0], #H
-                            [0.8*maximum_center, maximum_center*2.0], # x0
-                            [1e-6, 100.], #tau
-                            [maximum_center*2.0, histx.max()]] # x1
-                            # [-1e2, -1e-10]] #k]
-        self.para_guess = [np.mean(bound) for bound in self.prior_guess]
-        return
+#     def set_priors(self, histx, histy, dist):
+#         maximum_center = histx[histy==histy.max()][0]
+#         self.prior_guess = [[(histx.min()+maximum_center)/2.,  0.8*maximum_center], #xc
+#                             [0.2, 10.], # s
+#                             [1e-6, histy.max()*2.0], #H
+#                             [0.8*maximum_center, maximum_center*2.0], # x0
+#                             [1e-6, 100.], #tau
+#                             [maximum_center*2.0, histx.max()]] # x1
+#                             # [-1e2, -1e-10]] #k]
+#         self.para_guess = [np.mean(bound) for bound in self.prior_guess]
+#         return
 
-    def ymodel(self, theta, x):
-        xc, s, H, x0, tau, x1 = theta
-        # if (x is None): x = self.histx
-        ymodel = np.zeros(x.shape[0])
-        idx = x<x0
-        # if (erf(s*(x0-xc))+1)==0 : print(s, x0, xc)
-        A = H/(erf(s*(x0-xc))+1)
-        ymodel[idx] = A*(erf(s*(x[idx]-xc))+1)
-        idx = (x>=x0) & (x<x1)
-        ymodel[idx] = H*np.exp(-(x[idx]-x0)/tau) 
-        idx = x>=x1
-        ymodel[idx] = H*np.exp(-(x1-x0)/tau) # +k*(x[idx]-x1)
-        return ymodel
+#     def ymodel(self, theta, x):
+#         xc, s, H, x0, tau, x1 = theta
+#         # if (x is None): x = self.histx
+#         ymodel = np.zeros(x.shape[0])
+#         idx = x<x0
+#         # if (erf(s*(x0-xc))+1)==0 : print(s, x0, xc)
+#         A = H/(erf(s*(x0-xc))+1)
+#         ymodel[idx] = A*(erf(s*(x[idx]-xc))+1)
+#         idx = (x>=x0) & (x<x1)
+#         ymodel[idx] = H*np.exp(-(x[idx]-x0)/tau) 
+#         idx = x>=x1
+#         ymodel[idx] = H*np.exp(-(x1-x0)/tau) # +k*(x[idx]-x1)
+#         return ymodel
 
-    def sharpness(self, theta):
-        # use the derivative at xc as the sharpness metric
-        xc, s, H, x0 = theta[0:4]
-        A = H/(erf(s*(x0-xc))+1)
-        metric = A * 2/np.sqrt(np.pi) * s
-        return metric
+#     def sharpness(self, theta):
+#         # use the derivative at xc as the sharpness metric
+#         xc, s, H, x0 = theta[0:4]
+#         A = H/(erf(s*(x0-xc))+1)
+#         metric = A * 2/np.sqrt(np.pi) * s
+#         return metric
 
 
-class model4:
-    def __init__(self):
-        # # model3
-        self.para_name = ["sigma", "H", "x0", "tau" ] #"x1", "k"
-        return
+# class model4:
+#     def __init__(self):
+#         # # model3
+#         self.para_name = ["sigma", "H", "x0", "tau" ] #"x1", "k"
+#         return
     
-    def set_priors(self, histx, histy, dist):
-        x0 = histx[histy==histy.max()][0]
-        H = histy.max()
-        idx = histx<=x0
-        integration = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
-        sig = integration/(np.sqrt(np.pi/2.0)*H)
-        idx = histx>=x0
-        integration = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
-        tau = integration/H
-        self.prior_guess = [[1e-6, sig*5.0], #sigma
-                            [1e-6, histy.max()*2.], #H
-                            [histx.min(), histx.max()], # x0
-                            [tau*1e-3, tau*1e3]] #tau
-                            # [maximum_center+0.5*sig, histx.max()]] # x1
-                            # [-1e2, -1e-10]] #k]
-        self.para_guess = [sig, H, x0, tau]
-        return
+#     def set_priors(self, histx, histy, dist):
+#         x0 = histx[histy==histy.max()][0]
+#         H = histy.max()
+#         idx = histx<=x0
+#         integration = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
+#         sig = integration/(np.sqrt(np.pi/2.0)*H)
+#         idx = histx>=x0
+#         integration = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
+#         tau = integration/H
+#         self.prior_guess = [[1e-6, sig*5.0], #sigma
+#                             [1e-6, histy.max()*2.], #H
+#                             [histx.min(), histx.max()], # x0
+#                             [tau*1e-3, tau*1e3]] #tau
+#                             # [maximum_center+0.5*sig, histx.max()]] # x1
+#                             # [-1e2, -1e-10]] #k]
+#         self.para_guess = [sig, H, x0, tau]
+#         return
 
-    def ymodel(self, theta, x):
-        sigma, H, x0, tau = theta #, x1
-        # if (x is None): x = self.histx
-        ymodel = np.zeros(x.shape[0])
-        idx = x<x0
-        ymodel[idx] = H*np.exp(-((x[idx]-x0)**2.0)/(2*sigma**2.0))
-        idx = (x>=x0) #& (x<x1)
-        ymodel[idx] = H*np.exp(-(x[idx]-x0)/tau) 
-        # idx = x>=x1
-        # ymodel[idx] = H*np.exp(-(x1-x0)/tau) # +k*(x[idx]-x1)
-        return ymodel
+#     def ymodel(self, theta, x):
+#         sigma, H, x0, tau = theta #, x1
+#         # if (x is None): x = self.histx
+#         ymodel = np.zeros(x.shape[0])
+#         idx = x<x0
+#         ymodel[idx] = H*np.exp(-((x[idx]-x0)**2.0)/(2*sigma**2.0))
+#         idx = (x>=x0) #& (x<x1)
+#         ymodel[idx] = H*np.exp(-(x[idx]-x0)/tau) 
+#         # idx = x>=x1
+#         # ymodel[idx] = H*np.exp(-(x1-x0)/tau) # +k*(x[idx]-x1)
+#         return ymodel
 
-    def sharpness(self, theta):
-        # use the derivative at xc as the sharpness metric
-        sigma, H = theta[0:2]
-        metric = H/sigma
-        return metric
+#     def sharpness(self, theta):
+#         # use the derivative at xc as the sharpness metric
+#         sigma, H = theta[0:2]
+#         metric = H/sigma
+#         return metric
 
 
-class model5:
-    def __init__(self):
-        # # model3
-        self.para_name = ["sigma", "H", "x0", "tau" ] #"x1", "k"
-        self.ndim = 4
-        return
+# class model5:
+#     def __init__(self):
+#         # # model3
+#         self.para_name = ["sigma", "H", "x0", "tau" ] #"x1", "k"
+#         self.ndim = 4
+#         return
     
-    def set_priors(self, histx, histy, dist):
-        x0 = histx[histy==histy.max()][0]
-        H = histy.max()
-        idx = histx<=x0
-        integration = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
-        sig = integration/(np.sqrt(np.pi/2.0)*H)
-        idx = histx>=x0
-        integration = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
-        tau = integration/H
-        self.prior_guess = [[1e-6, sig*10.0], #sigma
-                            [1e-6, histy.max()*2.], #H
-                            [histx.min(), histx.max()], # x0
-                            [tau*1e-3, tau*1e3]] #tau
-                            # [maximum_center+0.5*sig, histx.max()]] # x1
-                            # [-1e2, -1e-10]] #k]
-        self.para_guess = [sig, H, x0, tau]
-        return
+#     def set_priors(self, histx, histy, dist):
+#         x0 = histx[histy==histy.max()][0]
+#         H = histy.max()
+#         idx = histx<=x0
+#         integration = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
+#         sig = integration/(np.sqrt(np.pi/2.0)*H)
+#         idx = histx>=x0
+#         integration = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
+#         tau = integration/H
+#         self.prior_guess = [[1e-6, sig*10.0], #sigma
+#                             [1e-6, histy.max()*2.], #H
+#                             [histx.min(), histx.max()], # x0
+#                             [tau*1e-3, tau*1e3]] #tau
+#                             # [maximum_center+0.5*sig, histx.max()]] # x1
+#                             # [-1e2, -1e-10]] #k]
+#         self.para_guess = [sig, H, x0, tau]
+#         return
 
-    def ymodel(self, theta, x):
-        sigma, H, x0, tau = theta #, x1
-        # if (x is None): x = self.histx
-        ymodel = np.zeros(x.shape[0])
-        idx = x<x0
-        ymodel[idx] = H*np.exp(-((x[idx]-x0)**2.0)/(2*sigma**2.0))
-        idx = (x>=x0) #& (x<x1)
-        ymodel[idx] = H*np.exp(-(x[idx]-x0)/tau) 
-        # idx = x>=x1
-        # ymodel[idx] = H*np.exp(-(x1-x0)/tau) # +k*(x[idx]-x1)
-        return ymodel
+#     def ymodel(self, theta, x):
+#         sigma, H, x0, tau = theta #, x1
+#         # if (x is None): x = self.histx
+#         ymodel = np.zeros(x.shape[0])
+#         idx = x<x0
+#         ymodel[idx] = H*np.exp(-((x[idx]-x0)**2.0)/(2*sigma**2.0))
+#         idx = (x>=x0) #& (x<x1)
+#         ymodel[idx] = H*np.exp(-(x[idx]-x0)/tau) 
+#         # idx = x>=x1
+#         # ymodel[idx] = H*np.exp(-(x1-x0)/tau) # +k*(x[idx]-x1)
+#         return ymodel
     
 
-    def sharpness(self, theta):
-        # use the derivative at xc as the sharpness metric
-        metric = theta[0] # sigma
-        return metric
+#     def sharpness(self, theta):
+#         # use the derivative at xc as the sharpness metric
+#         metric = theta[0] # sigma
+#         return metric
 
-class model5_prob:
-    def __init__(self):
-        # # model3
-        self.para_name = ["sigma", "x0", "tau" ] #"x1", "k"
-        self.ndim = 3
-        return
+# class model5_prob:
+#     def __init__(self):
+#         # # model3
+#         self.para_name = ["sigma", "x0", "tau" ] #"x1", "k"
+#         self.ndim = 3
+#         return
     
-    def set_priors(self, histx, histy, dist):
-        x0 = histx[histy==histy.max()][0]
-        H = histy.max()
-        idx = histx<=x0
-        integration = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
-        sig = integration/(np.sqrt(np.pi/2.0)*H)
-        idx = histx>=x0
-        integration = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
-        tau = integration/H
-        self.prior_guess = [[1e-6, sig*10.0], #sigma
-                            [histx.min(), histx.max()], # x0
-                            [tau*1e-3, tau*1e3]] #tau
-        self.para_guess = [sig, x0, tau]
-        return
+#     def set_priors(self, histx, histy, dist):
+#         x0 = histx[histy==histy.max()][0]
+#         H = histy.max()
+#         idx = histx<=x0
+#         integration = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
+#         sig = integration/(np.sqrt(np.pi/2.0)*H)
+#         idx = histx>=x0
+#         integration = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
+#         tau = integration/H
+#         self.prior_guess = [[1e-6, sig*10.0], #sigma
+#                             [histx.min(), histx.max()], # x0
+#                             [tau*1e-3, tau*1e3]] #tau
+#         self.para_guess = [sig, x0, tau]
+#         return
 
-    def ymodel(self, theta, x):
-        sigma, x0, tau = theta #, x1
-        # if (x is None): x = self.histx
-        x1, x2 = x.min(), x.max()
-        S1 = -(np.sqrt(np.pi/2.0)*sigma) * erf((x1-x0)/(np.sqrt(2)*sigma))
-        S2 = tau - tau*np.exp((x0-x2)/tau)
-        # H = 1./(np.sqrt(np.pi/2.)*sigma + tau)
-        H = 1.0/(S1+S2)
-        ymodel = np.zeros(x.shape[0])
-        idx = x<x0
-        ymodel[idx] = H*np.exp(-((x[idx]-x0)**2.0)/(2*sigma**2.0))
-        idx = (x>=x0) #& (x<x1)
-        ymodel[idx] = H*np.exp(-(x[idx]-x0)/tau) 
-        return ymodel
+#     def ymodel(self, theta, x):
+#         sigma, x0, tau = theta #, x1
+#         # if (x is None): x = self.histx
+#         x1, x2 = x.min(), x.max()
+#         S1 = -(np.sqrt(np.pi/2.0)*sigma) * erf((x1-x0)/(np.sqrt(2)*sigma))
+#         S2 = tau - tau*np.exp((x0-x2)/tau)
+#         # H = 1./(np.sqrt(np.pi/2.)*sigma + tau)
+#         H = 1.0/(S1+S2)
+#         ymodel = np.zeros(x.shape[0])
+#         idx = x<x0
+#         ymodel[idx] = H*np.exp(-((x[idx]-x0)**2.0)/(2*sigma**2.0))
+#         idx = (x>=x0) #& (x<x1)
+#         ymodel[idx] = H*np.exp(-(x[idx]-x0)/tau) 
+#         return ymodel
     
-    def sharpness(self, theta):
-        # use the derivative at xc as the sharpness metric
-        metric = theta[0] # sigma
-        return metric
+#     def sharpness(self, theta):
+#         # use the derivative at xc as the sharpness metric
+#         metric = theta[0] # sigma
+#         return metric
 
 
 class model6:
@@ -538,55 +554,93 @@ class model6:
             np.exp(-0.5)*((1./theta[0]*etheta[2])**2.0 + (-theta[2]/theta[0]**2.0*etheta[0])**2.0)**0.5]
         return e_metric
         
-class model6_prob:
+ 
+class model_rgb:
     def __init__(self):
         # # model3
-        self.para_name = ["sigma", "x0", "gamma" ] #"x1", "k"
-        self.ndim = 3
+        self.para_name = ["sigma", "x0", "H", "c"] #"x1", "k"
+        self.ndim = 4
         return
     
     def set_priors(self, histx, histy, dist):
-        x0 = histx[histy==histy.max()][0]
-        H = histy.max()
-        idx = histx<=x0
-        int1 = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
-        idx = histx>=x0
-        int2 = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
+        sig = np.mean(np.abs(histx))
+        x0 = 0.
+        H = np.max(histy)
+        c = np.median(histy)
 
-        int = int1+int2
-        int1 = int1/int
-        int2 = int2/int
-        H = H/int
-
-        sig = int1/(np.sqrt(np.pi/2.0)*H)
-
-        gamma = int2*2/H/np.pi
-        self.prior_guess = [[1e-3, sig*20.0], #sigma
-                            [histx.min(), histx.max()], # x0
-                            [gamma*1e-3, gamma*1e3]] #gamma
-        self.para_guess = [sig, x0, gamma]
+        self.prior_guess = [[1e-3, np.max(histx)], #sigma
+                            [histx.min()/5., histx.max()/5.], # x0
+                            [0.1*H, 2*H], #H
+                            [c*1e-3, c*2.]] #gamma
+        self.para_guess = [sig, x0, H, c]
         return
 
     def ymodel(self, theta, x):
-        sigma, x0, gamma = theta #, x1
-        # if (x is None): x = self.histx
-        x1, x2 = x.min(), x.max()
-        S1 = -(np.sqrt(np.pi/2.0)*sigma) * erf((x1-x0)/(np.sqrt(2)*sigma))
-        S2 = gamma*np.arctan((x2-x0)/gamma)
-        # H = 1./(np.sqrt(np.pi/2.)*sigma + tau)
-        H = 1.0/(S1+S2)
-        ymodel = np.zeros(x.shape[0])
-        idx = x<x0
-        ymodel[idx] = H*np.exp(-((x[idx]-x0)**2.0)/(2*sigma**2.0))
-        idx = (x>=x0) #& (x<x1)
-        ymodel[idx] = H/(1+(x[idx]-x0)**2.0/gamma**2.0)
+        sigma, x0, H, c = theta #, x1
+        ymodel = H*np.exp(-((x-x0)**2.0)/(2*sigma**2.0)) + c
         return ymodel
     
     def sharpness(self, theta):
         # use the derivative at xc as the sharpness metric
-        metric = theta[0] # sigma
+        metric = [theta[0], theta[2]/theta[0]*np.exp(-0.5)] # sigma
         return metric
- 
+    
+    def e_sharpness(self, theta, etheta):
+        e_metric = [etheta[0],
+            np.exp(-0.5)*((1./theta[0]*etheta[2])**2.0 + (-theta[2]/theta[0]**2.0*etheta[0])**2.0)**0.5]
+        return e_metric
+        
+# class model6_prob:
+#     def __init__(self):
+#         # # model3
+#         self.para_name = ["sigma", "x0", "gamma" ] #"x1", "k"
+#         self.ndim = 3
+#         return
+    
+#     def set_priors(self, histx, histy, dist):
+#         x0 = histx[histy==histy.max()][0]
+#         H = histy.max()
+#         idx = histx<=x0
+#         int1 = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
+#         idx = histx>=x0
+#         int2 = np.sum(histy[idx]) * np.median(np.diff(histx[idx]))
+
+#         int = int1+int2
+#         int1 = int1/int
+#         int2 = int2/int
+#         H = H/int
+
+#         sig = int1/(np.sqrt(np.pi/2.0)*H)
+
+#         gamma = int2*2/H/np.pi
+#         self.prior_guess = [[1e-3, sig*20.0], #sigma
+#                             [histx.min(), histx.max()], # x0
+#                             [gamma*1e-3, gamma*1e3]] #gamma
+#         self.para_guess = [sig, x0, gamma]
+#         return
+
+#     def ymodel(self, theta, x):
+#         sigma, x0, gamma = theta #, x1
+#         # if (x is None): x = self.histx
+#         x1, x2 = x.min(), x.max()
+#         S1 = -(np.sqrt(np.pi/2.0)*sigma) * erf((x1-x0)/(np.sqrt(2)*sigma))
+#         S2 = gamma*np.arctan((x2-x0)/gamma)
+#         # H = 1./(np.sqrt(np.pi/2.)*sigma + tau)
+#         H = 1.0/(S1+S2)
+#         ymodel = np.zeros(x.shape[0])
+#         idx = x<x0
+#         ymodel[idx] = H*np.exp(-((x[idx]-x0)**2.0)/(2*sigma**2.0))
+#         idx = (x>=x0) #& (x<x1)
+#         ymodel[idx] = H/(1+(x[idx]-x0)**2.0/gamma**2.0)
+#         return ymodel
+    
+#     def sharpness(self, theta):
+#         # use the derivative at xc as the sharpness metric
+#         metric = theta[0] # sigma
+#         return metric
+
+
+
 # how to fit
 class distfit:
     def __init__(self, dist, model, bins=None, density=False):
