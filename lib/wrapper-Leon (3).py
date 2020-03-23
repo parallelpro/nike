@@ -91,7 +91,7 @@ class Fitter:
 
         # setp 3, normalize the number of points in the weighted region
         normalize_factor = 1. / np.sum(histy[self._mask]) * np.sum(self._obs_obj.histy[self._mask])
-        histy = histy * normalize_factor
+        histy *= normalize_factor
 
         return histy, dist, normalize_factor
 
@@ -113,7 +113,7 @@ class Fitter:
 
     def lnprior(self, theta):#, para_limits):
         for i in range(len(theta)):
-            if not (self.para_limits[i][0] <= theta[i] <= self.para_limits[i][1] ):
+            if not (para_limits[i][0] <= theta[i] <= para_limits[i][1] ):
                 return -np.inf
         return 0.
 
@@ -148,7 +148,7 @@ class Fitter:
                     for idim in range(self.ndim)]) 
                     for iwalker in range(self.nwalkers)]
 
-            sampler = emcee.EnsembleSampler(self.nwalkers, self.ndim, self.lnpost)
+            sampler = emcee.EnsembleSampler(self.nwalkers, self.ndim, lnpost)
             # # burn-in
             print("start burning in. nburn:", self.nburn)
             for j, result in enumerate(sampler.sample(pos0, iterations=self.nburn, thin=10)):
@@ -272,7 +272,6 @@ def heb_fit(xobs, yobs, edges_obs, tck_obs, tp_obs,
     Ndata = dist_fit.shape[0]
     ridx = reduce_samples(Ndata, Ndata*normalize_factor)
 
-    dist_fit = dist_fit[ridx]
     if distance=="vertical":
         xfit = xpdv[ridx]
         yfit = ypdv[ridx] + scatter[ridx]*fitter.para_fit[1]
@@ -415,7 +414,6 @@ def rgb_fit(xobs, yobs, bump_obs, xpdv, ypdv, bump_pdv,
     Ndata = dist_fit.shape[0]
     ridx = reduce_samples(Ndata, Ndata*normalize_factor)
 
-    dist_fit = dist_fit[ridx]
     if distance=="vertical":
         xfit = xpdv[ridx]
         yfit = ypdv[ridx] + scatter[ridx]*fitter.para_fit[1]

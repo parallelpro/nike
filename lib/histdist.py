@@ -12,7 +12,7 @@ import sys
 import emcee
 import corner
 
-__all__ = ["distfit", "model6", "model_rgb",
+__all__ = ["distfit", "model6", "model_heb", "model_rgb",
             "distance_to_edge", "distance_to_bump", "reduce_samples"]
 
 def display_bar(j, nburn, width=30):
@@ -508,7 +508,7 @@ def distance_to_bump(xdata, ydata, bump_points,
 #         return metric
 
 
-class model6:
+class model_heb:
     def __init__(self):
         # # model3
         self.para_name = ["sigma", "x0", "H", "gamma"] #"x1", "k"
@@ -554,7 +554,7 @@ class model6:
             np.exp(-0.5)*((1./theta[0]*etheta[2])**2.0 + (-theta[2]/theta[0]**2.0*etheta[0])**2.0)**0.5]
         return e_metric
         
- 
+model6 = model_heb
 class model_rgb:
     def __init__(self):
         # # model3
@@ -775,6 +775,10 @@ class distfit:
         return
 
     def plot_hist(self, scale=1, ax=None, histkwargs={}):
+        if (ax is None):
+            fig = plt.figure(figsize=(12,6))
+            # axes = fig.subplots(nrows=2,ncols=1,squezzz=False).reshape(-1)
+            ax = fig.add_subplot(111)
         # ax.hist(self.dist, histtype="step", bins=self.bins, zorder=0, **histkwargs)
         ax.step(self.histx, self.histy/scale, **histkwargs)
         return ax        
