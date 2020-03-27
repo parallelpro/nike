@@ -12,7 +12,7 @@ import numpy as np
 import matplotlib
 # matplotlib.use("Agg")
 import sys
-sys.path.append(rootpath) 
+sys.path.append(rootpath)
 from lib.wrapper import rgb_fit
 import os
 
@@ -25,13 +25,13 @@ def loop(params):
     i, j = params
     # fdnu corrected sharma+2016
     obsdir = rootpath+"sample/rgb/yu/"
-    moddir = rootpath+"sample/rgb/mist/"
+    moddir = rootpath+"sample/rgb/padova/"
 
     distance, var = distances[i], variables[i]
 
     # read in unperturbed data sample
     obs = np.load(obsdir+"apk18.npy", allow_pickle=True).tolist()
-    pdv = np.load(moddir+"mist.npy", allow_pickle=True).tolist()
+    pdv = np.load(moddir+"padova.npy", allow_pickle=True).tolist()
 
     # read in edges
     if var == 'numax':
@@ -56,22 +56,21 @@ def loop(params):
         xpdv, ypdv = pdv["mass"], pdv["radius"]
 
 
-
     # multiprocessing workflow
     if j==0:
         # trial 1: upper limit
-        filepath = rootpath+"sample/rgb/sharpness/mist/"+var+"/ulim/"
+        filepath = rootpath+"sample/rgb/sharpness/padova/"+var+"/ulim/"
         if not os.path.exists(filepath): os.mkdir(filepath)
         rgb_fit(xobs, yobs, bump_obs, xpdv, ypdv, bump_pdv,
             var, distance, filepath)
     else:
         # trial 2: lower limit
-        filepath = rootpath+"sample/rgb/sharpness/mist/"+var+"/llim/"
+        filepath = rootpath+"sample/rgb/sharpness/padova/"+var+"/llim/"
         if not os.path.exists(filepath): os.mkdir(filepath)
 
         if var in ['dnu', 'numax']:
             rgb_fit(xobs, yobs, bump_obs, xpdv, ypdv, bump_pdv,
-                var, distance, filepath, xerror_sample=e_xobs, yerror_sample=e_yobs)
+                var, distance, filepath, yerror_sample=e_yobs)#xerror_sample=e_xobs, 
         if var=='mass':
             rgb_fit(xobs, yobs, bump_obs, xpdv, ypdv, bump_pdv,
                 var, distance, filepath, xerror_sample=e_xobs)

@@ -32,35 +32,36 @@ class Fitter:
     The two free parameters are an offset controlling the shift in the histogram, and a scatter to
     tweak the sharpness of the feature (RGB bump/zero-age HeB).
 
+    Parameters
+    ----------
+
+    filepath : str
+        output dir
+
+    obs_obj : distfit class
+        defined with data
+
+    model_obj : distfit class
+        defined with model
+
+    scatter : array_like[Ndata, ]
+        added to the model_obj.dist
+
+    mask : array_like[obs_obj.histy.shape], bool
+        mask on histograms
+
+    Methods
+    ----------
+    model : (theta)
+        returns histy, dist, normalize_factor
+
+    fit : (ifmcmc=True, para_limits=None, para_guess=None, nburn=500, nsteps=1000)
+        runs the fitting process
+
+
     '''
+    
     def __init__(self, filepath, obs_obj, model_obj, scatter, mask=None,):
-        '''
-        Parameters
-        ----------
-
-        filepath : str
-            output dir
-
-        obs_obj : distfit class
-            defined with data
-
-        model_obj : distfit class
-            defined with model
-
-        scatter : array_like[Ndata, ]
-            added to the model_obj.dist
-
-        mask : array_like[obs_obj.histy.shape], bool
-            mask on histograms
-
-        Methods
-        ----------
-        model : 
-
-        fit : 
-            
-
-        '''
         self.filepath = filepath
         self._obs_obj = obs_obj
         self._model_obj = model_obj
