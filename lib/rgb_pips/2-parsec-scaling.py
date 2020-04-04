@@ -46,26 +46,26 @@ def loop(params):
         bump_pdv = np.load(moddir+"dnu_bump.npy")
         xobs, yobs = obs["teff"], obs["dnu"]
         e_xobs, e_yobs = obs["e_teff"]/obs["teff"], obs["e_dnu"]/obs["dnu"]
-        xpdv, ypdv = pdv["teff"], pdv["dnu"]
+        xpdv, ypdv = pdv["teff"], pdv["dnu_nc"]
 
     if var in ['mass', 'radius']:
         bump_obs = np.load(obsdir+"mr_bump.npy")
         bump_pdv = np.load(moddir+"mr_bump.npy")
-        xobs, yobs = obs["mass"], obs["radius"]
-        e_xobs, e_yobs = obs["e_mass"]/obs["mass"], obs["e_radius"]/obs["radius"]
+        xobs, yobs = obs["mass_nc"], obs["radius_nc"]
+        e_xobs, e_yobs = obs["e_mass_nc"]/obs["mass_nc"], obs["e_radius_nc"]/obs["radius_nc"]
         xpdv, ypdv = pdv["mass"], pdv["radius"]
 
 
     # multiprocessing workflow
     if j==0:
         # trial 1: upper limit
-        filepath = rootpath+"sample/rgb/sharpness/padova/"+var+"/ulim/"
+        filepath = rootpath+"sample/rgb/sharpness/kb95/"+var+"/ulim/"
         if not os.path.exists(filepath): os.mkdir(filepath)
         rgb_fit(xobs, yobs, bump_obs, xpdv, ypdv, bump_pdv,
             var, distance, filepath)
     else:
         # trial 2: lower limit
-        filepath = rootpath+"sample/rgb/sharpness/padova/"+var+"/llim/"
+        filepath = rootpath+"sample/rgb/sharpness/kb95/"+var+"/llim/"
         if not os.path.exists(filepath): os.mkdir(filepath)
 
         if var in ['dnu', 'numax']:

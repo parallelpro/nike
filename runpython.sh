@@ -15,7 +15,11 @@ hostname
 # module load Anaconda3-5.1.0
 # '/headnode2/yali4742/nike'
 # python3 "lib/pips/5-mist.py"
-python3 'lib/pips/3-mass.py'
-python3 'lib/pips/4-feh.py'
+python3 'lib/heb_pips/1-parsec-fdnu.py'
+python3 'lib/heb_pips/2-parsec-scaling.py'
+python3 'lib/heb_pips/5-mist-fdnu.py'
+# python3 'lib/rgb_pips/1-parsec-fdnu.py'
+# python3 'lib/rgb_pips/2-parsec-scaling.py'
+# python3 'lib/rgb_pips/5-mist-fdnu.py'
 date
 exit

@@ -13,20 +13,21 @@ import matplotlib
 # matplotlib.use("Agg")
 import sys
 sys.path.append(rootpath) 
-from lib.histdist import model_heb
-from lib.wrapper import heb_llim_fit, heb_ulim_fit#sharpness_fit_rescale_mcmc
+from lib.wrapper import heb_fit
 import os
 
-diagrams = ['tnu', 'tnu', 'mr', 'mr']
+# diagrams = ['tnu', 'tnu', 'mr', 'mr']
 distances = ['horizontal', 'vertical', 'horizontal', 'vertical']
 variables = ['numax', 'dnu', 'mass', 'radius']
 
-for i in range(1,4):
+# for i in range(2):
+def loop(params):
+    i, j = params
     # fdnu corrected sharma+2016
     obsdir = rootpath+"sample/heb/yu_nc/"
     moddir = rootpath+"sample/heb/padova_nc/"
 
-    diagram, distance, var = diagrams[i], distances[i], variables[i]
+    distance, var = distances[i], variables[i]
 
     # read in unperturbed data sample
     obs = np.load(obsdir+"yu18.npy", allow_pickle=True).tolist()
@@ -44,7 +45,7 @@ for i in range(1,4):
 
 
     # read in edges
-    if diagram == 'tnu':
+    if var in ['dnu', 'numax']:
         edges_obs = np.load(obsdir+"tnu_edge_samples.npy")
         tck_obs, tp_obs = np.load(obsdir+"nike_spline_tck.npy", allow_pickle=True)
         edges_pdv = np.load(moddir+"tnu_edge_samples.npy")
@@ -71,7 +72,7 @@ for i in range(1,4):
         e_xobs, e_yobs = obs["e_numax"]/obs["numax"], obs["e_dnu"]/obs["dnu"]
         xpdv, ypdv = pdv["numax"], pdv["dnu_nc"]
 
-    if diagram == 'mr':
+    if var in ['mass', 'radius']:
         edges_obs = np.load(obsdir+"mr_edge_samples.npy")
         tck_obs, tp_obs = np.load(obsdir+"mr_spline_tck.npy", allow_pickle=True)
         edges_pdv = np.load(moddir+"mr_edge_samples.npy")
@@ -82,7 +83,7 @@ for i in range(1,4):
             idx = obs["radius_nc"] <= np.max(edges_obs[:,1])
             for key in obs.keys():
                 obs[key] = obs[key][idx]   
-            idx = pdv["radius"] <= np.max(edges_obs[:,1])
+            idx = pdv["radius_nc"] <= np.max(edges_pdv[:,1])
             for key in pdv.keys():
                 pdv[key] = pdv[key][idx]
 
@@ -94,21 +95,31 @@ for i in range(1,4):
         e_xobs, e_yobs = obs["e_mass_nc"]/obs["mass_nc"], obs["e_radius_nc"]/obs["radius_nc"]
         xpdv, ypdv = pdv["mass"], pdv["radius"]
 
-    hist_model = model_heb()
 
+    # multiprocessing workflow
+    if j==0:
+        # trial 1: lower limit
+        filepath = rootpath+"sample/heb/sharpness/kb95/"+var+"/ulim/"   
+        if not os.path.exists(filepath): os.mkdir(filepath)
+        heb_fit(xobs, yobs, edges_obs, tck_obs, tp_obs,
+            xpdv, ypdv, edges_pdv, tck_pdv, tp_pdv,
+            var, distance, filepath)
+    else:
+        # trial 2: lower limit
+        filepath = rootpath+"sample/heb/sharpness/kb95/"+var+"/llim/"
+        if not os.path.exists(filepath): os.mkdir(filepath)
 
-    # trial 1: upper limit
-    filepath = rootpath+"sample/heb/sharpness/kb95/"+var+"/ulim/"
-    if not os.path.exists(filepath): os.mkdir(filepath)
-    heb_ulim_fit(xobs, yobs, edges_obs, tck_obs, tp_obs,
-        xpdv, ypdv, edges_pdv, tck_pdv, tp_pdv,
-        diagram, distance, hist_model, filepath, ifmcmc=True, nburn=500, nsteps=1000)
+        if var in ['numax', 'mass']:
+            heb_fit(xobs, yobs, edges_obs, tck_obs, tp_obs,
+                xpdv, ypdv, edges_pdv, tck_pdv, tp_pdv,
+                var, distance, filepath, xerror_sample=e_xobs)
+        if var in ['dnu', 'radius']:
+            heb_fit(xobs, yobs, edges_obs, tck_obs, tp_obs,
+                xpdv, ypdv, edges_pdv, tck_pdv, tp_pdv,
+                var, distance, filepath, yerror_sample=e_yobs)
 
-    # trial 2: lower limit
-    eobs = e_xobs if distance=='horizontal' else e_yobs
-    filepath = rootpath+"sample/heb/sharpness/kb95/"+var+"/llim/"
-    if not os.path.exists(filepath): os.mkdir(filepath)
-    heb_llim_fit(xobs, yobs, eobs, edges_obs, tck_obs, tp_obs,
-        xpdv, ypdv, edges_pdv, tck_pdv, tp_pdv,
-        diagram, distance, hist_model, filepath, ifmcmc=True, nburn=500, nsteps=1000)
-
+# # multiprocessing workflow
+from multiprocessing import Pool
+with Pool(8) as p:
+    # p.map(loop, [[0,0], [0,1], [1,0], [1,1], [2,0], [2,1], [3,0], [3,1]])
+    p.map(loop, [[2,0], [2,1]])

@@ -59,13 +59,13 @@ def loop(params):
     # multiprocessing workflow
     if j==0:
         # trial 1: upper limit
-        filepath = rootpath+"sample/rgb/sharpness/padova/"+var+"/ulim/"
+        filepath = rootpath+"sample/rgb/sharpness/sharma16/"+var+"/ulim/"
         if not os.path.exists(filepath): os.mkdir(filepath)
         rgb_fit(xobs, yobs, bump_obs, xpdv, ypdv, bump_pdv,
             var, distance, filepath)
     else:
         # trial 2: lower limit
-        filepath = rootpath+"sample/rgb/sharpness/padova/"+var+"/llim/"
+        filepath = rootpath+"sample/rgb/sharpness/sharma16/"+var+"/llim/"
         if not os.path.exists(filepath): os.mkdir(filepath)
 
         if var in ['dnu', 'numax']:

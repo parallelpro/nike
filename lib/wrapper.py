@@ -222,12 +222,12 @@ def heb_fit(xobs, yobs, edges_obs, tck_obs, tp_obs,
     if not (xerror_sample is None):
         eobs = xerror_sample
         xerror_resampled = np.random.normal(size=Ndata) * 10.0**scipy.signal.resample(np.log10(eobs), Ndata)
-        xpdv += xerror_resampled
+        xpdv += xpdv*xerror_resampled
 
     if not (yerror_sample is None):
         eobs = yerror_sample
         yerror_resampled = np.random.normal(size=Ndata) * 10.0**scipy.signal.resample(np.log10(eobs), Ndata)
-        ypdv += yerror_resampled
+        ypdv += ypdv*yerror_resampled
 
     hdist_pdv, xpdv, ypdv = distance_to_edge(xpdv, ypdv, edges_pdv[:,0], edges_pdv[:,1],
                     tck_pdv, tp_pdv, diagram=diagram, distance=distance)
@@ -366,12 +366,12 @@ def rgb_fit(xobs, yobs, bump_obs, xpdv, ypdv, bump_pdv,
     if not (xerror_sample is None):
         eobs = xerror_sample[np.abs(hdist_obs) <= 3*sigma]
         xerror_resampled = np.random.normal(size=Ndata) * 10.0**scipy.signal.resample(np.log10(eobs), Ndata)
-        xpdv += xerror_resampled
+        xpdv += xpdv*xerror_resampled
 
     if not (yerror_sample is None):
         eobs = yerror_sample[np.abs(hdist_obs) <= 3*sigma]
         yerror_resampled = np.random.normal(size=Ndata) * 10.0**scipy.signal.resample(np.log10(eobs), Ndata)
-        ypdv += yerror_resampled
+        ypdv += ypdv*yerror_resampled
 
     hdist_pdv, xpdv, ypdv = distance_to_bump(xpdv, ypdv, bump_pdv, distance=distance)
     mod = distfit(hdist_pdv, hist_model, bins=obs.bins)
