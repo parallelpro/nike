@@ -99,14 +99,14 @@ def loop(params):
     # multiprocessing workflow
     if j==0:
         # trial 1: lower limit
-        filepath = rootpath+"sample/heb/sharpness/mist/"+var+"/ulim/"   
+        filepath = rootpath+"sample/heb/sharpness/mistsharma16/"+var+"/ulim/"   
         if not os.path.exists(filepath): os.mkdir(filepath)
         heb_fit(xobs, yobs, edges_obs, tck_obs, tp_obs,
             xpdv, ypdv, edges_pdv, tck_pdv, tp_pdv,
             var, distance, filepath)
     else:
         # trial 2: lower limit
-        filepath = rootpath+"sample/heb/sharpness/mist/"+var+"/llim/"
+        filepath = rootpath+"sample/heb/sharpness/mistsharma16/"+var+"/llim/"
         if not os.path.exists(filepath): os.mkdir(filepath)
 
         if var in ['numax', 'mass']:

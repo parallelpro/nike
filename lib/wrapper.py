@@ -91,7 +91,8 @@ class Fitter:
         histy, _ = np.histogram(dist, bins=bins)
 
         # setp 3, normalize the number of points in the weighted region
-        normalize_factor = 1. / np.sum(histy[self._mask]) * np.sum(self._obs_obj.histy[self._mask])
+        normalize_factor = np.sum(self._obs_obj.histy[self._mask]) / np.sum(histy[self._mask])
+        if not np.isfinite(normalize_factor): normalize_factor=1.
         histy = histy * normalize_factor
 
         return histy, dist, normalize_factor
@@ -101,6 +102,7 @@ class Fitter:
         histy, _, _ = self.model(theta)
         d, m = self._obs_obj.histy[self._mask], histy[self._mask]
         if m[m==0].shape[0] == 0:
+            m[m==0] = 1
             logdfact = scipy.special.gammaln(d+1) 
             lnL =  np.sum(d*np.log(m)-m-logdfact)
             return lnL
@@ -109,7 +111,7 @@ class Fitter:
 
 
     def chi2(self, theta):
-        return -np.exp(self.lnlikelihood(theta))
+        return -self.lnlikelihood(theta)
 
 
     def lnprior(self, theta):#, para_limits):
@@ -176,8 +178,16 @@ class Fitter:
             self.para_fit = result[:,0]
             self.e_para_fit = (result[:,1]+result[:,2])/2.0
 
+            # maximum
+            para_fitmax = np.zeros(self.ndim)
+            for ipara in range(self.ndim):
+                n, bins, _ = plt.hist(self.samples[:,ipara], bins=80)
+                idx = np.where(n == n.max())[0][0]
+                para_fitmax[ipara] = bins[idx:idx+1].mean()
+            self.para_fitmax = para_fitmax
+
             # corner plot
-            fig = corner.corner(self.samples, labels=self.para_names, show_titles=True)
+            fig = corner.corner(self.samples, labels=self.para_names, show_titles=True, truths=para_fitmax)
             plt.savefig(self.filepath+"corner.png")
             plt.close()
 
@@ -187,6 +197,7 @@ class Fitter:
             # res = minimize(minus_lnlikelihood, para_guess, bounds=para_limits)
 
             self.para_fit = res.x 
+            self.para_fitmax = res.x 
             self.e_para_fit = None
             self.samples = None
             
@@ -251,12 +262,12 @@ def heb_fit(xobs, yobs, edges_obs, tck_obs, tp_obs,
     # set up Fitter parameters
     nburn = 500 if (nburn is None) else nburn
     nsteps = 1000 if (nsteps is None) else nsteps
-    xd = np.abs(obs.para_fit[1]-mod.para_fit[1])
+    xd = np.abs(obs.histx[mask].max()-obs.histx[mask].min())#np.abs(obs.para_fit[1]-mod.para_fit[1])
     if diagram == "tnu":
-        para_limits = [[-3*xd, 3*xd], [0., 0.08]]
+        para_limits = [[-xd, xd], [0., 0.08]]
         para_guess = [0., 0.005]
     else:
-        para_limits = [[-3*xd, 3*xd], [0., 0.20]]
+        para_limits = [[-xd, xd], [0., 0.20]]
         para_guess = [0., 0.005]  
 
     # set up a fit class
@@ -269,19 +280,19 @@ def heb_fit(xobs, yobs, edges_obs, tck_obs, tp_obs,
     axes = fig.subplots(nrows=2, ncols=1)            
 
     # calculate best fitted results
-    _, dist_fit, normalize_factor = fitter.model(fitter.para_fit)
+    _, dist_fit, normalize_factor = fitter.model(fitter.para_fitmax)
     Ndata = dist_fit.shape[0]
     ridx = reduce_samples(Ndata, Ndata*normalize_factor)
 
     dist_fit = dist_fit[ridx]
     if distance=="vertical":
         xfit = xpdv[ridx]
-        yfit = ypdv[ridx] + scatter[ridx]*fitter.para_fit[1]
+        yfit = ypdv[ridx] + scatter[ridx]*fitter.para_fitmax[1]
     else:
-        xfit = xpdv[ridx] + scatter[ridx]*fitter.para_fit[1]
+        xfit = xpdv[ridx] + scatter[ridx]*fitter.para_fitmax[1]
         yfit = ypdv[ridx]
 
-    dist_fit += fitter.para_fit[0]
+    # dist_fit += fitter.para_fitmax[0]
     ofit = distfit(dist_fit, hist_model, bins=obs.bins)
 
     # # axes[0]: histograms
@@ -290,8 +301,8 @@ def heb_fit(xobs, yobs, edges_obs, tck_obs, tp_obs,
     axes[0].step(ofit.histx, ofit.histy, **{"color":"blue", "label":"Galaxia best fitted model"})
 
     alignment = {"ha":"left", "va":"top", "transform":axes[0].transAxes}
-    axes[0].text(0.01, 0.95, "Offset: {:0.2f} (initial: {:0.2f})".format(fitter.para_fit[0], para_guess[0]), **alignment)
-    axes[0].text(0.01, 0.90, "Scatter: {:0.2f}% (initial: {:0.2f}%)".format(fitter.para_fit[1]*100, para_guess[1]*100), **alignment) 
+    axes[0].text(0.01, 0.95, "Offset: {:0.2f} (initial: {:0.2f})".format(fitter.para_fitmax[0], para_guess[0]), **alignment)
+    axes[0].text(0.01, 0.90, "Scatter: {:0.2f}% (initial: {:0.2f}%)".format(fitter.para_fitmax[1]*100, para_guess[1]*100), **alignment) 
     axes[0].text(0.01, 0.85, "Variable: {:s}".format(variable), **alignment)
     axes[0].text(0.01, 0.80, "Distance: {:s}".format(distance), **alignment)
     axes[0].legend()
@@ -320,7 +331,8 @@ def heb_fit(xobs, yobs, edges_obs, tck_obs, tp_obs,
 
     # save data
     data = {"samples":fitter.samples, "ndim":fitter.ndim,
-            "para_fit":fitter.para_fit, "e_para_fit":fitter.e_para_fit, "para_guess":fitter.para_guess,
+            "para_fit":fitter.para_fit, "para_fitmax":fitter.para_fitmax,
+            "e_para_fit":fitter.e_para_fit, "para_guess":fitter.para_guess,
             "variable":variable, "distance":distance, 
             "xobs":xobs, "yobs":yobs, "xpdv":xpdv, "ypdv":ypdv, "xfit":xfit, "yfit":yfit,
             "obj_obs":obs, "obj_pdv":mod, "obj_fit":ofit, "fitter":fitter,
@@ -412,19 +424,19 @@ def rgb_fit(xobs, yobs, bump_obs, xpdv, ypdv, bump_pdv,
     axes = fig.subplots(nrows=2, ncols=1)            
 
     # calculate best fitted results
-    _, dist_fit, normalize_factor = fitter.model(fitter.para_fit)
+    _, dist_fit, normalize_factor = fitter.model(fitter.para_fitmax)
     Ndata = dist_fit.shape[0]
     ridx = reduce_samples(Ndata, Ndata*normalize_factor)
 
     dist_fit = dist_fit[ridx]
     if distance=="vertical":
         xfit = xpdv[ridx]
-        yfit = ypdv[ridx] + scatter[ridx]*fitter.para_fit[1]
+        yfit = ypdv[ridx] + scatter[ridx]*fitter.para_fitmax[1]
     else:
-        xfit = xpdv[ridx] + scatter[ridx]*fitter.para_fit[1]
+        xfit = xpdv[ridx] + scatter[ridx]*fitter.para_fitmax[1]
         yfit = ypdv[ridx]
 
-    dist_fit += fitter.para_fit[0]
+    # dist_fit += fitter.para_fitmax[0]
     ofit = distfit(dist_fit, hist_model, bins=obs.bins)
 
     # # axes[0]: histograms
@@ -433,8 +445,8 @@ def rgb_fit(xobs, yobs, bump_obs, xpdv, ypdv, bump_pdv,
     axes[0].step(ofit.histx, ofit.histy, **{"color":"blue", "label":"Galaxia best fitted model"})
 
     alignment = {"ha":"left", "va":"top", "transform":axes[0].transAxes}
-    axes[0].text(0.01, 0.95, "Offset: {:0.2f} (initial: {:0.2f})".format(fitter.para_fit[0], para_guess[0]), **alignment)
-    axes[0].text(0.01, 0.90, "Scatter: {:0.2f}% (initial: {:0.2f}%)".format(fitter.para_fit[1]*100, para_guess[1]*100), **alignment) 
+    axes[0].text(0.01, 0.95, "Offset: {:0.2f} (initial: {:0.2f})".format(fitter.para_fitmax[0], para_guess[0]), **alignment)
+    axes[0].text(0.01, 0.90, "Scatter: {:0.2f}% (initial: {:0.2f}%)".format(fitter.para_fitmax[1]*100, para_guess[1]*100), **alignment) 
     axes[0].text(0.01, 0.85, "Variable: {:s}".format(variable), **alignment)
     axes[0].text(0.01, 0.80, "Distance: {:s}".format(distance), **alignment)
     axes[0].legend()
@@ -469,7 +481,8 @@ def rgb_fit(xobs, yobs, bump_obs, xpdv, ypdv, bump_pdv,
 
     # save data
     data = {"samples":fitter.samples, "ndim":fitter.ndim,
-            "para_fit":fitter.para_fit, "e_para_fit":fitter.e_para_fit, "para_guess":fitter.para_guess,
+            "para_fit":fitter.para_fit, "para_fitmax":fitter.para_fitmax,
+            "e_para_fit":fitter.e_para_fit, "para_guess":fitter.para_guess,
             "variable":variable, "distance":distance, 
             "xobs":xobs, "yobs":yobs, "xpdv":xpdv, "ypdv":ypdv, "xfit":xfit, "yfit":yfit,
             "obj_obs":obs, "obj_pdv":mod, "obj_fit":ofit, "fitter":fitter,
@@ -478,6 +491,182 @@ def rgb_fit(xobs, yobs, bump_obs, xpdv, ypdv, bump_pdv,
     np.save(filepath+"data", data)
     return
 
+
+def heb_combo_fit(xobs_combo, yobs_combo, edges_obs_combo, tck_obs_combo, tp_obs_combo,
+        xpdv, ypdv, edges_pdv, tck_pdv, tp_pdv,
+        variable, distance, filepath, 
+        xerror_sample=None, yerror_sample=None):
+    
+    print("variable:",variable)
+    print("distance:",distance)
+    diagram = 'tnu' if variable in ['dnu', 'numax'] else 'mr'
+
+    para_fit = []
+    para_fitmax = []
+    e_para_fit = []
+
+    Nexp = len(edges_obs_combo)
+    for iexp in range(Nexp):
+        xobs, yobs = xobs_combo[iexp], yobs_combo[iexp]
+        edges_obs, tck_obs, tp_obs = edges_obs_combo[iexp], tck_obs_combo[iexp], tp_obs_combo[iexp]
+
+        # calculate Kepler distance
+        hist_model = model_heb()
+
+        hdist_obs, xobs, yobs = distance_to_edge(xobs, yobs, edges_obs[:,0], edges_obs[:,1],
+                        tck_obs, tp_obs, diagram=diagram, distance=distance)
+        obs = distfit(hdist_obs, hist_model)
+        obs = distfit(hdist_obs, hist_model, bins=obs.bins)
+        obs.fit(ifmcmc=False)
+
+        # calculate Galaxia distance
+        Ndata = xpdv.shape[0]
+        if not (xerror_sample is None):
+            eobs = xerror_sample[iexp]
+            xerror_resampled = np.random.normal(size=Ndata) * 10.0**scipy.signal.resample(np.log10(eobs), Ndata)
+            xpdv += xpdv*xerror_resampled
+
+        if not (yerror_sample is None):
+            eobs = yerror_sample[iexp]
+            yerror_resampled = np.random.normal(size=Ndata) * 10.0**scipy.signal.resample(np.log10(eobs), Ndata)
+            ypdv += ypdv*yerror_resampled
+
+        hdist_pdv, xpdv, ypdv = distance_to_edge(xpdv, ypdv, edges_pdv[:,0], edges_pdv[:,1],
+                        tck_pdv, tp_pdv, diagram=diagram, distance=distance)
+        mod = distfit(hdist_pdv, hist_model, bins=obs.bins)
+        mod.fit(ifmcmc=False)
+
+        # defind a mask
+        mask = np.zeros(obs.histx.shape, dtype=bool)
+        sigma, x0 = obs.para_fit[0], obs.para_fit[1]
+        idx = (obs.histx >= x0-3*sigma) & (obs.histx <= x0+3*sigma)
+        mask[idx] = True
+
+        # define a scatter sample
+        Ndata = xpdv.shape[0]
+        if distance=="vertical":
+            scatter = ypdv * np.random.normal(size=Ndata)
+        else:
+            scatter = xpdv * np.random.normal(size=Ndata)
+    
+        # set up Fitter parameters
+        # nburn = 500 if (nburn is None) else nburn
+        # nsteps = 1000 if (nsteps is None) else nsteps
+        xd = np.abs(obs.histx[mask].max()-obs.histx[mask].min())#np.abs(obs.para_fit[1]-mod.para_fit[1])
+        if diagram == "tnu":
+            para_limits = [[-xd, xd], [0., 0.08]]
+            para_guess = [0., 0.005]
+        else:
+            para_limits = [[-xd, xd], [0., 0.20]]
+            para_guess = [0., 0.005]  
+
+        # set up a fit class
+        fitter = Fitter(filepath, obs, mod, scatter, mask=mask)
+        fitter.fit(ifmcmc=True, para_limits=para_limits, para_guess=para_guess, nburn=250, nsteps=250)
+
+        para_fit.append(fitter.para_fit)
+        para_fitmax.append(fitter.para_fitmax)
+        e_para_fit.append(fitter.e_para_fit)
+
+    # save data
+    data = {"para_fit":para_fit, "para_fitmax":para_fitmax,
+            "e_para_fit":e_para_fit,
+            "variable":variable, "distance":distance}
+
+    np.save(filepath+"data", data)
+
+    return
+
+
+
+def rgb_combo_fit(xobs, yobs, bump_obs_combo, xpdv, ypdv, bump_pdv,
+        variable, distance, filepath, 
+        xerror_sample=None, yerror_sample=None):
+    
+    print("variable:",variable)
+    print("distance:",distance)
+    
+
+    if variable == "numax":
+        bins = np.arange(-30, 30, 2.0)
+    if variable == "dnu":
+        bins = np.arange(-3, 3, 0.2)
+    if variable == "radius":
+        bins = np.arange(-2, 2, 0.2)
+    if variable == "mass":
+        bins = np.arange(-0.4, 0.4, 0.05)
+
+    para_fit = []
+    para_fitmax = []
+    e_para_fit = []
+
+    Nexp = len(bump_obs_combo)
+    for iexp in range(Nexp):
+        bump_obs = bump_obs_combo[iexp]
+
+        # calculate Kepler distance
+        hist_model = model_rgb()
+
+        hdist_obs, xobs, yobs = distance_to_bump(xobs, yobs, bump_obs, distance=distance)
+        obs = distfit(hdist_obs, hist_model, bins=bins)
+        obs.fit(ifmcmc=False)
+
+
+        # calculate Galaxia distance
+        Ndata = xpdv.shape[0]
+        sigma = obs.para_fit[0]
+        if not (xerror_sample is None):
+            eobs = xerror_sample[np.abs(hdist_obs) <= 3*sigma]
+            xerror_resampled = np.random.normal(size=Ndata) * 10.0**scipy.signal.resample(np.log10(eobs), Ndata)
+            xpdv += xpdv*xerror_resampled
+
+        if not (yerror_sample is None):
+            eobs = yerror_sample[np.abs(hdist_obs) <= 3*sigma]
+            yerror_resampled = np.random.normal(size=Ndata) * 10.0**scipy.signal.resample(np.log10(eobs), Ndata)
+            ypdv += ypdv*yerror_resampled
+
+        hdist_pdv, xpdv, ypdv = distance_to_bump(xpdv, ypdv, bump_pdv, distance=distance)
+        mod = distfit(hdist_pdv, hist_model, bins=obs.bins)
+        mod.fit(ifmcmc=False)
+
+
+        # defind a mask
+        mask = np.zeros(obs.histx.shape, dtype=bool)
+        sigma, x0 = obs.para_fit[0], obs.para_fit[1]
+        idx = (obs.histx >= x0-4*sigma) & (obs.histx <= x0+4*sigma)
+        mask[idx] = True
+
+        # define a scatter sample
+        Ndata = xpdv.shape[0]
+        if distance=="vertical":
+            scatter = ypdv * np.random.normal(size=Ndata)
+        else:
+            scatter = xpdv * np.random.normal(size=Ndata)
+    
+        # set up Fitter parameters
+        sig = obs.para_fit[0]
+        if variable in ["dnu", "numax"]:
+            para_limits = [[-sig, sig], [0., 0.30]]
+            para_guess = [0., 0.005]
+        else:
+            para_limits = [[-sig, sig], [0., 0.30]]
+            para_guess = [0., 0.005]  
+
+        # set up a fit class
+        fitter = Fitter(filepath, obs, mod, scatter, mask=mask)
+        fitter.fit(ifmcmc=True, para_limits=para_limits, para_guess=para_guess, nburn=250, nsteps=250)
+
+        para_fit.append(fitter.para_fit)
+        para_fitmax.append(fitter.para_fitmax)
+        e_para_fit.append(fitter.e_para_fit)
+
+    # save data
+    data = {"para_fit":para_fit, "para_fitmax":para_fitmax,
+            "e_para_fit":e_para_fit,
+            "variable":variable, "distance":distance}
+
+    np.save(filepath+"data", data)
+    return
 
 
 # def heb_ulim_fit(xobso, yobso, edges_obs, tck_obs, tp_obs,

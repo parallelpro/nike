@@ -589,7 +589,44 @@ class model_rgb:
         e_metric = [etheta[0],
             np.exp(-0.5)*((1./theta[0]*etheta[2])**2.0 + (-theta[2]/theta[0]**2.0*etheta[0])**2.0)**0.5]
         return e_metric
-        
+
+class model7:
+    def __init__(self):
+        # # model3
+        self.para_name = ["sigma", "x0", "H", "c", "k"] #"x1", "k"
+        self.ndim = 5
+        return
+    
+    def set_priors(self, histx, histy, dist):
+        sig = np.mean(np.abs(histx))
+        x0 = 0.
+        H = np.max(histy)
+        c = np.median(histy)
+        k = 0.
+
+        self.prior_guess = [[1e-3, np.max(histx)], #sigma
+                            [histx.min()/5., histx.max()/5.], # x0
+                            [0.1*H, 2*H], #H
+                            [c*1e-3, c*2.], #c
+                            [-1000., 1000.]] #k
+        self.para_guess = [sig, x0, H, c, k]
+        return
+
+    def ymodel(self, theta, x):
+        sigma, x0, H, c, k = theta #, x1
+        ymodel = H*np.exp(-((x-x0)**2.0)/(2*sigma**2.0)) + c + k*x
+        return ymodel
+    
+    def sharpness(self, theta):
+        # use the derivative at xc as the sharpness metric
+        metric = [theta[0], theta[2]/theta[0]*np.exp(-0.5)] # sigma
+        return metric
+    
+    def e_sharpness(self, theta, etheta):
+        e_metric = [etheta[0],
+            np.exp(-0.5)*((1./theta[0]*etheta[2])**2.0 + (-theta[2]/theta[0]**2.0*etheta[0])**2.0)**0.5]
+        return e_metric
+
 # class model6_prob:
 #     def __init__(self):
 #         # # model3

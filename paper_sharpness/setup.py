@@ -36,16 +36,17 @@ if os.name == 'nt':
     rootpath = '/Users/yali4742/'
 else:
     rootpath = '/Volumes/Data/'
-overleaf_path = '/Users/yaguang/Dropbox (Sydney Uni)/Apps/Overleaf/Yaguang_NIKE_sharpness/figs/'
+overleaf_path = '/Users/yaguang/Dropbox (Sydney Uni)/Apps/Overleaf/Yaguang_SharpRedGiants/figs/'
 work_path = rootpath+'Onedrive/Work/nike/'
 sys.path.append(work_path)
 
-matplotlib.rcParams["font.size"] = 7.5
-matplotlib.rcParams['font.family'] = 'Serif'
+matplotlib.rcParams["font.size"] = 7.0#7.5
+matplotlib.rcParams["legend.fontsize"] = 5.5#7.5
+matplotlib.rcParams['font.family'] = 'serif'
 matplotlib.rcParams['text.usetex'] = True
 #plt.rc('font', family='serif')
-matplotlib.rcParams['xtick.labelsize'] = 7
-matplotlib.rcParams['ytick.labelsize'] = 7
+matplotlib.rcParams['xtick.labelsize'] = 7.0#7
+matplotlib.rcParams['ytick.labelsize'] = 7.0#7
 matplotlib.rcParams['ytick.direction']='out'
 matplotlib.rcParams['ytick.major.size']=5.0
 matplotlib.rcParams['ytick.minor.size']=3.0

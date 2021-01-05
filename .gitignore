@@ -1,7 +1,9 @@
 ebfpy-master/
-galaxia-0.7.2/
-references/
 fdnu/
+galaxia-0.7.2/
+lib/archived
+lib/__pycache__
+references/
 nike_plot/
 sample/
 .DS_Store
